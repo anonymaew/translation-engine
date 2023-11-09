@@ -1,121 +1,139 @@
-import time
-from docx import Document
-import openai
-import os
 import re
+import time
+import openai
+from openai import OpenAI
+
+# client = OpenAI()
+from docx import Document
+import inflect
 from dotenv import load_dotenv
+import os
 
-# Load the environment variables
+# Load the API key from an .env file
 load_dotenv('config.env')
-
-# Set the API key from the .env file
 API_KEY = os.getenv('API_KEY')
-openai.api_key = API_KEY
+client = OpenAI(api_key=API_KEY)
 
-# Function to handle rate limiting by waiting for 65 seconds
-def handle_rate_limited_request(context_messages):
+# Initialize inflect engine
+p = inflect.engine()
+
+def calculate_token_length(messages):
+    # This function calculates the total token length for a list of messages
+    return sum(len(message['content'].split()) for message in messages)
+
+def reduce_context_size(context_messages, max_tokens):
+    # This function reduces the size of context_messages to be within max_tokens
+    while calculate_token_length(context_messages) > max_tokens:
+        # Remove the oldest message
+        context_messages.pop(0)
+    return context_messages
+
+def handle_rate_limited_request(context_messages, max_tokens=4000):
+    max_context_tokens = 8192 - max_tokens
     while True:
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=context_messages,
-                temperature=0,
-                max_tokens=256
-            )
+            # Make sure the context_messages don't exceed the token limit.
+            if calculate_token_length(context_messages) > max_context_tokens:
+                # Reduce the size of context_messages to fit within the limit
+                context_messages = reduce_context_size(context_messages, max_context_tokens)
+
+            response = client.chat.completions.create(model="gpt-4",
+            messages=context_messages,
+            temperature=0,
+            max_tokens=max_tokens)
             return response
-        except openai.error.RateLimitError:
-            print("Rate limit reached, waiting for 65 seconds.")
-            time.sleep(65)  # Wait for 65 seconds
+        except openai.RateLimitError:
+            time.sleep(65)
+        except openai.OpenAIError as e:
+            raise
 
-# Function to segment a long text into smaller parts based on an approximate character limit
-def segment_text(text, approx_max_chars=2000):
-    # Regular expression to match sentence endings reliably
-    sentence_endings = re.compile(r'(?<=[.!?]) +')
-    sentences = sentence_endings.split(text)
+def segment_text(text, max_segment_size=800):
+    """
+    Splits the text into segments, each having a length less than the max_segment_size.
+    The max_segment_size should account for context and translation instructions.
+    """
+    sentences = re.split(r'(?<=[.!?]) +', text)
     segments = []
-    current_segment = ""
-
+    current_segment = ''
+    current_size = 0
+    
     for sentence in sentences:
-        # Check if adding the next sentence would exceed the approximate max characters
-        if len(current_segment) + len(sentence) <= approx_max_chars:
-            current_segment += (sentence + " ") if current_segment else sentence
+        sentence_size = len(sentence)
+        # Check if adding the next sentence would exceed the max_segment_size
+        if current_size + sentence_size > max_segment_size:
+            segments.append(current_segment.strip())
+            current_segment = sentence + ' '
+            current_size = sentence_size
         else:
-            # If the current segment is empty and the sentence is too long, split the sentence further
-            if not current_segment:
-                sub_sentences = re.findall('.{1,%d}(?:\\s+|$)' % approx_max_chars, sentence)
-                segments.extend(sub_sentences)
-            else:
-                segments.append(current_segment)
-                current_segment = sentence
+            current_segment += sentence + ' '
+            current_size += sentence_size
+    
     # Add the last segment if it contains any text
     if current_segment:
-        segments.append(current_segment.strip())  # Strip the trailing space
-
+        segments.append(current_segment.strip())
+    
     return segments
 
-# Function to translate a piece of text using GPT-4, maintaining context
-def translate_text(text, source_language, target_language, context_messages):
-    # Segment text into manageable parts if it's too long
-    text_segments = segment_text(text)
-    full_translation = ""
+
+
+def translate_text(segmented_text, context_messages, max_tokens=4000):
+    full_translation = ''
     
-    for segment in text_segments:
-        # Append the user message to the context
+    for segment in segmented_text:
+        # Trim the context to ensure it's within token limits before making a request
+        while calculate_token_length(context_messages) + len(segment.split()) > max_tokens:
+            context_messages.pop(0)  # Remove oldest messages if we're over the limit
+        
         context_messages.append({"role": "user", "content": segment})
-        
-        # Perform the translation with the context
-        response = handle_rate_limited_request(context_messages)
-        
-        # Extract the translation from the response
-        translation = response.choices[0].message.content.strip()
-        full_translation += translation + " "
-        
-        # Update the context with the model's reply
-        context_messages.append({"role": "assistant", "content": translation})
-        
-        # Check and reduce the context if needed
-        context_messages = context_messages[-10:]  # Keep only the last 10 messages
-
-    # Remove the trailing space from the last segment
-    full_translation = full_translation.strip()
+        try:
+            response = handle_rate_limited_request(context_messages)
+            translation = response.choices[0].message.content.strip()
+            full_translation += translation + ' '
+            # Update context_messages with the translation to maintain conversation context
+            context_messages.append({"role": "assistant", "content": translation})
+            # Trim context_messages if necessary
+            context_messages = reduce_context_size(context_messages, max_tokens)
+        except Exception as e:
+            print(f"Failed to translate segment: {segment}. Error: {e}")
+            break
     
-    return full_translation, context_messages
+    return full_translation.strip()
 
 
-# Function to translate an entire .docx document
+def format_number(text):
+    # Formats numbers in text to words if they are less than 10
+    new_text = ''
+    for word in text.split():
+        if word.isdigit():
+            number = int(word)
+            word = p.number_to_words(number) if number < 10 else word
+        new_text += word + ' '
+    return new_text.strip()
+
 def translate_docx(file_path, source_language, target_language, output_file_path):
     doc = Document(file_path)
     new_doc = Document()
     
-    # Initial context setup for the translation task
-    context_messages = [
-        {
-            "role": "system",
-            "content": f"You will be provided with text in {source_language}, and your task is to translate it into {target_language}."
-        }
-    ]
+    context_messages = [{"role": "system", "content": f"Translate from {source_language} to {target_language}."}]
     
-    # Translate each paragraph in the document, maintaining context
-    for i, paragraph in enumerate(doc.paragraphs[234:]):
-        if paragraph.text.strip():  # Only translate non-empty paragraphs
-            try:
-                translation, context_messages = translate_text(
-                    paragraph.text, source_language, target_language, context_messages
-                )
-                print(f"{translation} index: {i}")
-                new_doc.add_paragraph(translation)
-                # Save after every successful translation
-                new_doc.save(output_file_path)
-            except Exception as e:
-                # If an error occurs, log it and save the current progress
-                print(f"An error occurred: {e}")
-                new_doc.save(output_file_path)
-                raise
+    for i, paragraph in enumerate(doc.paragraphs[35:]):
+        if paragraph.text.strip():  # Check if the paragraph is not empty
+            formatted_text = format_number(paragraph.text)
+            segmented_text = segment_text(formatted_text)
+            translation = translate_text(segmented_text, context_messages)
+            
+            trans_para = new_doc.add_paragraph(translation)
+            print(f"{trans_para.text} ix-> {i}")
+            new_doc.save(output_file_path)
+            if paragraph.style.name.startswith('Heading'):
+                trans_para.style = paragraph.style
+    
+    new_doc.save(output_file_path)
 
-# Usage
 source_language = "Chinese"
 target_language = "English"
-file_path = "国史家事.docx"  # Path to the input .docx file
-output_file_path = "output.docx"  # Path to save the output .docx file
+file_path = "国史家事.docx"
+output_file_path = "translated_output.docx"
 
 translate_docx(file_path, source_language, target_language, output_file_path)
+
