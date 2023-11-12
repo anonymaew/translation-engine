@@ -2,7 +2,7 @@
 
 # This script is used to start the development environment.
 # It will chack for the existence of a .env file and if it does not exist, it will create one.
-# If a new .env file is created, the user will be prompted for an API key and the key will be added to the .env file.
+# If a new .env file is created or the existing file is empty, the user will be prompted for an API key and the key will be added to the .env file.
 
 # Check for .env file
 env_file="config.env"
