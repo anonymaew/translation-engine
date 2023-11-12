@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# This script is used to start the development environment.
+# It will chack for the existence of a .env file and if it does not exist, it will create one.
+# If a new .env file is created, the user will be prompted for an API key and the key will be added to the .env file.
+
+# Check for .env file
+env_file="config.env"
+
+if [ -f "$env_file" ]; then
+    echo "$env_file found."
+else
+    echo "$env_file not found."
+    echo "Creating $env_file..."
+    touch $env_file
+    echo "API_KEY=" >> $env_file
+    echo "Please enter your API key:"
+    read api_key
+    echo "API_KEY=$api_key" >> $env_file
+    echo "API_KEY added to $env_file"
+fi
