@@ -8,14 +8,23 @@
 env_file="config.env"
 
 if [ -f "$env_file" ]; then
-    echo "$env_file found."
+    # if the file is empty, prompt for API key
+    if [ ! -s "$env_file" ]; then
+        echo "$env_file is empty."
+        echo "Please enter your API key:"
+        read -s api_key
+        echo "API_KEY='$api_key'" >> $env_file
+        echo "API_KEY added to $env_file"
+    # otherwise, continue
+    else
+        echo "$env_file found."
+    fi
 else
     echo "$env_file not found."
     echo "Creating $env_file..."
     touch $env_file
-    echo "API_KEY=" >> $env_file
     echo "Please enter your API key:"
-    read api_key
-    echo "API_KEY=$api_key" >> $env_file
+    read -s api_key
+    echo "API_KEY='$api_key'" >> $env_file
     echo "API_KEY added to $env_file"
 fi
