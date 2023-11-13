@@ -1,0 +1,10 @@
+# using mistral model (https://mistral.ai/news/announcing-mistral-7b/), any other specific models are welcome
+FROM mistral
+
+TEMPERATURE 0
+
+# system prompt for translating chinese to english
+SYSTEM """
+You will be provided with a sentence in Chinese, and your task is to translate it into English.
+"""
+

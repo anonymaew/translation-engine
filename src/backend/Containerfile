@@ -1,0 +1,10 @@
+FROM docker.io/ollama/ollama:0.1.8
+
+RUN apt-get install -y curl
+
+COPY Modelfile .
+RUN ollama serve & \
+	sleep 2 && curl -X POST 'http://localhost:11434/api/create' -d '{ "name": "translation-engine", "path": "Modelfile" }'
+
+EXPOSE 11434
+ENTRYPOINT ["ollama", "serve"]
