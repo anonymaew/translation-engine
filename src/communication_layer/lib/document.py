@@ -2,12 +2,14 @@
 from docx import Document
 from .translation import translate
 
-# The following function accepts a .docx file
-# It extracts the text from the file
-# It splits the text into paragraphs
-# It calls the translate function on each paragraph
-# The function returns a list of English paragraphs
-def translate_docx(docx):
+'''
+The following function accepts a .docx file
+It extracts the text from the file
+It splits the text into paragraphs
+It calls the translate function on each paragraph
+The function returns a list of English paragraphs
+'''
+def translate_docx(docx) -> list:
     # The list of English paragraphs
     english = []
 
@@ -22,10 +24,13 @@ def translate_docx(docx):
     # Return the list of English paragraphs
     return english
 
-# The following function accepts a .docx file
-# It constructs a new .docx file with the translated text
-# The function returns None
-def write_docx(docx, english):
+'''
+The following function accepts a .docx file
+as well as a list of English paragraphs
+It writes the paragraphs to the file
+The function returns nothing
+'''
+def write_docx(docx, english) -> None:
     # The document to be written
     document = Document()
 

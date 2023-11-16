@@ -5,21 +5,12 @@
 # Powered by Large Language Models installed with ollama
 # The engine accepts Chinese text and translates it to Academic English
 # The engine runs inside of a docker container
-
 # The model API is exposed on port 11434
-
-# The following program accepts a string of Chinese text
-# It then translates the text to English by making a request to the model API
-# The program then returns the English translation
 
 import sys
 import os
 import time
-from docx import Document
-from lib.translation import translate
-
-# The exposed port for the model API
-PORT = 11434
+from lib.document import translate_docx, write_docx
 
 if __name__ == "__main__":
     # The following code is executed when the program is run from the command line
@@ -51,7 +42,19 @@ if __name__ == "__main__":
     start = time.time()
 
     # Translate the text now that the file has been validated
-    translation = translate(path, PORT)
+    translation = translate_docx(path)
+
+    # Write the translated text to a new file
+    write_docx(translation, path)
 
     # Stop the timer
     end = time.time()
+
+    # Calculate the time elapsed
+    elapsed = end - start
+
+    # Log the time elapsed
+    print(f"Translation completed in {elapsed} seconds")
+
+    # Exit the program
+    sys.exit(0)
