@@ -1,6 +1,6 @@
 FROM docker.io/ollama/ollama:0.1.8
 
-RUN apt-get install -y curl
+RUN apt-get install -y curl pandoc
 
 COPY Modelfile .
 RUN ollama serve & \
