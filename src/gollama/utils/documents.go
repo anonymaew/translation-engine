@@ -57,22 +57,17 @@ func ReadMarkdown(filename string) string {
 
 // Write the markdown file
 func WriteMarkdown(data string, filename string) error {
-	// Write the file creating it if it doesn't exist
-	if !FileExists(filename) {
-		file, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-	}
-	
-	// Write the data to the file
-	bytes := []byte(data)
-	err := os.WriteFile(filename, bytes, 0644)
+	// If the file doesn't exist, create it, or append to the file
+	f, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-
+	if _, err := f.Write([]byte("appended some data\n")); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 

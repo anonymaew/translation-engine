@@ -58,15 +58,13 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		// Add the translation to translated_paragraphs
-		translated_paragraphs = append(translated_paragraphs, translation)
+		// Append the translated paragraph to the output file
+		err = utils.WriteMarkdown("output.md", translation)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
 	}
-
-	// Join the translated paragraphs into a single string
-	translation := strings.Join(translated_paragraphs, "\n\n")
-
-	// Write the translation to a file
-	utils.WriteMarkdown(translation, "output.md")
 
 	// Log that the translation was successful
 	logger.Println("Translation complete")
