@@ -45,7 +45,7 @@ if __name__ == "__main__":
     translation = translate_docx(path)
 
     # Write the translated text to a new file
-    write_docx(translation, path)
+    write_docx(translation)
 
     # Stop the timer
     end = time.time()
