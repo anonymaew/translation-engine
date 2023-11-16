@@ -25,14 +25,16 @@ def translate(text, context=None, port=11434) -> str:
         data = {
                 "model": "llama2",
                 "prompt": text,
-                "context": context
+                "context": context,
+                "stream": "false"
                 }
 
     else:
         # The data to be sent to the model API
         data = {
                 "model": "llama2",
-                "prompt": text
+                "prompt": text,
+                "stream": "false"
                 }
 
     # Make a request to the model API

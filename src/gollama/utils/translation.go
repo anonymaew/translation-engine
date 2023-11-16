@@ -5,14 +5,23 @@ package utils
 // Returns a string of translated text
 
 import (
+	"bufio"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 )
 
+// Struct to hold the response from the ollama api
+type Response struct {
+	Response string `json:"response"`
+}
+
 // Translate a string of text
 func Translate(text string) (string, error) {
+	// Array of response strings
+	var responses []string
+
 	// Create the request url
 	url := "http://127.0.0.1:11434/api/generate/"
 
@@ -20,8 +29,8 @@ func Translate(text string) (string, error) {
 	data, err := json.Marshal(map[string]string{
 		"model":  "llama2",
 		"prompt": text,
-		"stream": "false",
 	})
+
 	if err != nil {
 		return "", err
 	}
@@ -39,69 +48,36 @@ func Translate(text string) (string, error) {
 	// Send the request
 	client := &http.Client{}
 
-	// wg := sync.WaitGroup{}
-
+	// Read the first response so we can get the status code
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 
-	body, err := readBody(resp)
-	if err != nil {
-		return "", err
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", err
+		}
+
+		// unmarshal the response
+		var response Response
+		err = json.Unmarshal(line, &response)
+		if err != nil {
+			return "", err
+		}
+
+		// Add the response to the array
+		responses = append(responses, response.Response)
 	}
 
-	temp, err := decodeBody(body)
-	if err != nil {
-		return "", err
-	}
-
-	response := temp["response"].(string)
-
-	// for resp.StatusCode == 307 {
-	// 	// Read the response body
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		resp, err = client.Do(req)
-	// 		if err != nil {
-	// 			return
-	// 		}
-	// 		body, err := readBody(resp)
-	// 		if err != nil {
-	// 			return
-	// 		}
-	// 		temp, err := decodeBody(body)
-	// 		if err != nil {
-	// 			return 
-	// 		}
-	// 		response += temp["response"].(string)
-	// 	}()
-	// 	wg.Wait()
-	// }
+	// turn the response into a string
+	result := strings.Join(responses, "")
 
 	// Return the translated text
-	return response, nil
-}
-
-// Read the response body
-func readBody(resp *http.Response) (string, error) {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(body), nil
-}
-
-// Decode the response body
-func decodeBody(body string) (map[string]interface{}, error) {
-	var result map[string]interface{}
-
-	err := json.Unmarshal([]byte(body), &result)
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
