@@ -1,8 +1,10 @@
 package utils
 
-// Helper function to translate a string of text
+// Handles the translation of text
 // Makes http requests to the ollama api
 // Returns a string of translated text
+
+// Author: Korben Tompkin
 
 import (
 	"bufio"

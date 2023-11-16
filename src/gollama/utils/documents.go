@@ -1,11 +1,7 @@
 package utils
 
-// Helper functions for working with document files
-// Chacks if file exists
-// Checks the file extension
-// Makes an appropriate pandoc call to convert to markdown
-// Reads the markdown file
-// Returns the document as a string
+// Suite of functions for working with documents in the translation engine
+// Author: Korben Tompkin
 
 import (
 	"fmt"
@@ -78,4 +74,11 @@ func WriteMarkdown(data string, filename string) error {
 	}
 
 	return nil
+}
+
+// Split content into paragraphs
+func GetParagraphs(content string) []string {
+	// Split the content into paragraphs
+	paragraphs := strings.Split(content, "\n\n")
+	return paragraphs
 }

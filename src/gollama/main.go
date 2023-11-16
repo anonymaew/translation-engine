@@ -14,11 +14,14 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"translation-engine/src/gollama/utils"
 )
 
 func main() {
+	var translated_paragraphs []string
+	
 	// Create a logger
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 
@@ -38,13 +41,29 @@ func main() {
 	// Read the file
 	file := utils.ReadMarkdown(fileName)
 
-	// Translate the file
-	translation, err := utils.Translate(file)
-	if err != nil {
-		logger.Fatal(err)
+	// Get an array of paragraphs from the file
+	paragraphs := utils.GetParagraphs(file)
+
+	// Translate the file paragraph by paragraph
+	for i, paragraph := range paragraphs {
+		// Log the paragraph number
+		logger.Printf("Paragraph %d", i+1)
+
+		// Log the paragraph
+		logger.Println(paragraph)
+
+		// Translate the paragraph
+		translation, err := utils.Translate(paragraph)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		// Add the translation to translated_paragraphs
+		translated_paragraphs = append(translated_paragraphs, translation)
 	}
 
-	logger.Println(translation)
+	// Join the translated paragraphs into a single string
+	translation := strings.Join(translated_paragraphs, "\n\n")
 
 	// Write the translation to a file
 	utils.WriteMarkdown(translation, "output.md")
