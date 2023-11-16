@@ -56,7 +56,7 @@ func main() {
 		}
 
 		// Append the translated paragraph to the output file
-		err = utils.WriteMarkdown("output.md", translation)
+		err = utils.WriteMarkdown("output.md", translation + "\n\n")
 		if err != nil {
 			logger.Fatal(err)
 		}
