@@ -14,14 +14,11 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 
 	"translation-engine/src/gollama/utils"
 )
 
 func main() {
-	var translated_paragraphs []string
-	
 	// Create a logger
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 

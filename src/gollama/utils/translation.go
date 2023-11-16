@@ -32,7 +32,6 @@ func Translate(text string) (string, error) {
 		"model":  "llama2",
 		"prompt": text,
 	})
-
 	if err != nil {
 		return "", err
 	}
