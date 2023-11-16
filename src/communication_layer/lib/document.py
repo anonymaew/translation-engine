@@ -9,17 +9,22 @@ It splits the text into paragraphs
 It calls the translate function on each paragraph
 The function returns a list of English paragraphs
 '''
-def translate_docx(docx) -> list:
+
+def get_paragraphs(file_path):
+    doc = Document(file_path)
+    return [(paragraph.text, paragraph.style) for paragraph in doc.paragraphs if paragraph.text.strip() != '']
+
+def translate_docx(document) -> list:
     # The list of English paragraphs
     english = []
 
     # Extract the text from the file
-    text = docx.paragraphs
+    text = get_paragraphs(document)
 
     # Iterate through each paragraph
     for paragraph in text:
         # Translate the paragraph
-        english.append(translate(paragraph.text))
+        english.append(translate(paragraph[0]))
 
     # Return the list of English paragraphs
     return english

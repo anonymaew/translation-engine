@@ -14,7 +14,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run the program
-python3 main.py
+python3 main.py $1
 
 # Deactivate the virtual environment
 deactivate
