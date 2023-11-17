@@ -58,7 +58,7 @@ func ReadMarkdown(filename string) string {
 // Write the markdown file
 func WriteMarkdown(data string, filename string) error {
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("output.md", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
