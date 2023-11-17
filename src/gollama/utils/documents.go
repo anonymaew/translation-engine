@@ -77,3 +77,18 @@ func GetParagraphs(content string) []string {
 	paragraphs := strings.Split(content, "\n\n")
 	return paragraphs
 }
+
+// Converts markdown to docx using pandoc
+func MarkdownToDocx(filename string) error {
+	// Get the file extension
+	ext := filepath.Ext(filename)
+	// Get the filename without the extension
+	name := strings.TrimSuffix(filename, ext)
+	// Make the pandoc call
+	cmd := exec.Command("pandoc", "-f", "markdown", "-t", "docx", filename, "-o", name+".docx")
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
+}

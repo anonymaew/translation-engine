@@ -9,6 +9,7 @@ package utils
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -20,9 +21,12 @@ type Response struct {
 }
 
 // Translate a string of text
-func Translate(text string) (string, error) {
+func Translate(text string, sourceLanguage string, targetLanguage string) (string, error) {
 	// Array of response strings
 	var responses []string
+
+	// Format the prompt with the source and target languages
+	prompt := fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text: \n\n%s", sourceLanguage, targetLanguage, text)
 
 	// Create the request url
 	url := "http://127.0.0.1:11434/api/generate/"
@@ -30,7 +34,7 @@ func Translate(text string) (string, error) {
 	// Format the request body
 	data, err := json.Marshal(map[string]string{
 		"model":  "llama2",
-		"prompt": text,
+		"prompt": prompt,
 	})
 	if err != nil {
 		return "", err
