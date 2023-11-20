@@ -20,16 +20,16 @@ func FileExists(filename string) bool {
 }
 
 // Check if file is a markdown file
-func toMarkdown(filename string) error {
+func toMarkdown(filename string) (string, error) {
 	if strings.HasSuffix(filename, ".md") {
-		return nil
+		return "", nil
 	}
-	err := callPandoc(filename)
-	return err
+	name, err := callPandoc(filename)
+	return name, err
 }
 
 // Call pandoc to convert to markdown
-func callPandoc(filename string) error {
+func callPandoc(filename string) (string, error) {
 	// Get the file extension
 	ext := filepath.Ext(filename)
 	// Get the filename without the extension
@@ -38,16 +38,19 @@ func callPandoc(filename string) error {
 	cmd := exec.Command("pandoc", "-f", ext[1:], "-t", "markdown", filename, "-o", name+".md")
 	err := cmd.Run()
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return name+".md", nil
 }
 
 // Read the markdown file
-func ReadMarkdown(filename string) string {
-	err := toMarkdown(filename)
-	// Read the file
-	data, err := os.ReadFile(filename)
+func ReadFile(filename string) string {
+	name, err := toMarkdown(filename)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Read the newly created markdown file
+	data, err := os.ReadFile(name)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -58,11 +61,12 @@ func ReadMarkdown(filename string) string {
 // Write the markdown file
 func WriteMarkdown(data string, filename string) error {
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.OpenFile("output.md", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	if _, err := f.Write([]byte("appended some data\n")); err != nil {
+	// Write the data to the file
+	if _, err := f.Write([]byte(data)); err != nil {
 		return err
 	}
 	if err := f.Close(); err != nil {

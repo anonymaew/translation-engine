@@ -1,3 +1,7 @@
 output.*
 *.log
 temp.*
+curl_out.docx
+translated_output.docx
+translated_output.md
+test.sh
