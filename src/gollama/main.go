@@ -176,5 +176,11 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 	// Serve the file content
-	http.ServeContent(w, r, "translated_file.docx", time.Now(), file)
+	http.ServeContent(w, r, translatedFilePath, time.Now(), f)
+
+	// Delete the output file when the function returns
+	defer os.Remove("output.md")
+	defer os.Remove("output.docx")
+
+	return
 }
