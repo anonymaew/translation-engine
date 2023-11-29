@@ -21,9 +21,9 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 11434
+  - port: 8080
     protocol: TCP
-    targetPort: 11434
+    targetPort: 8080
   selector:
     k8s-app: backend
 
@@ -46,7 +46,7 @@ spec:
           service:
             name: backend-service
             port:
-              number: 11434
+              number: 8080
   tls:
   - hosts:
     - dcct.nrp-nautilus.io
