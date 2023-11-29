@@ -12,8 +12,11 @@ package main
 // The engine returns a JSON stream of the translated text
 
 import (
+	"crypto/rand"
+	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,16 +28,19 @@ import (
 const (
 	// The port that the server will run on
 	PORT = ":8080"
+	CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
 )
 
 type TranslateDocumentRequest struct {
 	SourceLanguage string `json:"source_language"`
 	TargetLanguage string `json:"target_language"`
+	CustomPrompt   string `json:"custom_prompt"`
 }
 
 func main() {
 	// Initialize the server
 	http.HandleFunc("/translate", translateDocumentHandler)
+	http.HandleFunc("/download", downloadHandler)
 	http.ListenAndServe(PORT, nil)
 
 	// Exit the program
@@ -64,10 +70,12 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var jsonRequest TranslateDocumentRequest
 	jsonRequest.SourceLanguage = r.FormValue("source_language")
 	jsonRequest.TargetLanguage = r.FormValue("target_language")
+	jsonRequest.CustomPrompt = r.FormValue("custom_prompt")
 
 	// Access other form values as needed
 	sourceLanguage := jsonRequest.SourceLanguage
 	targetLanguage := jsonRequest.TargetLanguage
+	customPrompt := jsonRequest.CustomPrompt
 
 	// Access the file from the form data
 	file, _, err := r.FormFile("file")
@@ -109,6 +117,9 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	// Log the source and target languages
 	logger.Println("Source language:", sourceLanguage)
 	logger.Println("Target language:", targetLanguage)
+	if customPrompt != "" {
+		logger.Println("Custom prompt:", customPrompt)
+	}
 
 	// Read the file
 	text := utils.ReadFile("temp.docx")
@@ -122,7 +133,7 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Println("Paragraph", i+1)
 
 		// Translate the paragraph
-		translation, err := utils.Translate(paragraph, sourceLanguage, targetLanguage)
+		translation, err := utils.Translate(paragraph, sourceLanguage, targetLanguage, customPrompt)
 		if err != nil {
 			http.Error(w, "Error translating", http.StatusInternalServerError)
 			logger.Println(err)
@@ -169,18 +180,105 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	// Exit message
 	logger.Println("--------END TRANSLATION--------")
 
-	// Set the Content-Disposition header to trigger a download
-	w.Header().Set("Content-Disposition", "attachment; filename=translated_file.docx")
+	// ---------------------------------------
+	// Serve the file via a download link
+	// Only serve from the /downloads directory
+	// ---------------------------------------
 
-	// Set the Content-Type header for a .docx file
-	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	// Create the downloads directory if it doesn't exist
+	if _, err := os.Stat("downloads"); os.IsNotExist(err) {
+		os.Mkdir("downloads", 0755)
+	}
 
-	// Serve the file content
-	http.ServeContent(w, r, translatedFilePath, time.Now(), f)
+	// Create a cryptographically secure random string for the filename
+	name := fmt.sprintf("downloads/%s_translation.docx", randomString(10))
+
+	// Create a copy of the file
+	outputFile, err := os.Create(name)
+	if err != nil {
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+
+	// Copy the file to the temp file
+	_, err = io.Copy(outputFile, f)
+	if err != nil {
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+
+	// Redirect to the download link
+	http.Redirect(w, r, "/download?filename=output.docx", http.StatusSeeOther)
 
 	// Delete the output file when the function returns
 	defer os.Remove("output.md")
 	defer os.Remove("output.docx")
 
 	return
+}
+
+func downloadHandler(w http.ResponseWriter, r *http.Request) {
+	// Create an ELF compliant logger
+	// Log the time, date, and file name
+	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	// Get the filename from the query string
+	filename := r.URL.Query().Get("filename")
+
+	// Relative path to the file
+	relativePath := "downloads/" + filename
+
+	// Get the absolute path
+	absFilePath, err := filepath.Abs(relativePath)
+	if err != nil {
+		http.Error(w, "Error getting absolute path", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+
+	// Open the file
+	f, err := os.Open(absFilePath)
+	if err != nil {
+		http.Error(w, "Error opening file", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+	defer f.Close()
+
+	// Read the file into a byte array
+	fileBytes, err := io.ReadAll(f)
+	if err != nil {
+		http.Error(w, "Error reading file", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+
+	// Delete the file when the function returns
+	defer os.Remove(absFilePath)
+
+	// Set the content type header
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	// Set the content disposition header
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+
+	// Write the file to the response writer
+	w.Write(fileBytes)
+
+	return
+}
+
+func randomString(n int) (string, error) {
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(CHARS))))
+		if err != nil {
+			return "", err
+		}
+		ret[i] = CHARS[num.Int64()]
+	}
+
+	return string(ret), nil
 }

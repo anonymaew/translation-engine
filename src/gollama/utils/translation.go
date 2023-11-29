@@ -21,12 +21,19 @@ type Response struct {
 }
 
 // Translate a string of text
-func Translate(text string, sourceLanguage string, targetLanguage string) (string, error) {
+func Translate(text string, sourceLanguage string, targetLanguage string, customPrompt string) (string, error) {
 	// Array of response strings
 	var responses []string
 
-	// Format the prompt with the source and target languages
-	prompt := fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text: \n\n%s", sourceLanguage, targetLanguage, text)
+	// Prompt to be sent to the ollama api
+	var prompt string
+
+	// Format the prompt with the source and target languages if no custom prompt is provided
+	if customPrompt == "" {
+		prompt = fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text: \n\n%s", sourceLanguage, targetLanguage, text)
+	} else {
+		prompt = fmt.Sprintf("%s \n\n%s", customPrompt, text)
+	}
 
 	// Create the request url
 	url := "http://127.0.0.1:11434/api/generate/"

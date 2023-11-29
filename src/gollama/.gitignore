@@ -1,4 +1,5 @@
 output.*
+*.txt
 *.log
 temp.*
 curl_out.docx
