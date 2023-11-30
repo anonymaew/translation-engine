@@ -1,0 +1,7 @@
+FROM golang
+
+COPY gollama /gollama
+RUN cd /gollama && go build
+
+EXPOSE 8080
+ENTRYPOINT ["/entrypoint.sh"]
