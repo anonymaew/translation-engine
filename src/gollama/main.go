@@ -191,7 +191,8 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a cryptographically secure random string for the filename
-	name := fmt.sprintf("downloads/%s_translation.docx", randomString(10))
+	randStr, _ := randomString(10)
+	name := fmt.Sprintf("downloads/%s_translation.docx", randStr)
 
 	// Create a copy of the file
 	outputFile, err := os.Create(name)
