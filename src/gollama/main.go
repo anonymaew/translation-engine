@@ -5,7 +5,7 @@ package main
 
 // The following program is middleware for a translation engine
 // Powered by Large Language Models installed with ollama
-// The engine accepts Chinese text and translates it to Academic English
+// The program accepts a .docx file and translates it into another language
 // The engine runs inside of a docker container
 // The model API is exposed on port 11434
 // The engine accepts text via a POST request to /api/generate
@@ -26,9 +26,10 @@ import (
 )
 
 const (
-	// The port that the server will run on
-	PORT = ":8080"
-	CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+	BASE_URL="http://127.0.0.1:8080" // The base url for the server
+	PORT = ":8080" // The port for the server
+	CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-" // The characters to use for the random string
+	LENGTH = 10 // The length of the random string
 )
 
 type TranslateDocumentRequest struct {
@@ -191,11 +192,14 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a cryptographically secure random string for the filename
-	randStr, _ := randomString(10)
-	name := fmt.Sprintf("downloads/%s_translation.docx", randStr)
+	randStr, _ := randomString(LENGTH)
+	name := fmt.Sprintf("%s_translation.docx", randStr)
+
+	// Relative path to the file
+	path := fmt.Sprintf("downloads/%s", name)
 
 	// Create a copy of the file
-	outputFile, err := os.Create(name)
+	outputFile, err := os.Create(path)
 	if err != nil {
 		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		logger.Println(err)
@@ -210,8 +214,11 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to the download link
-	http.Redirect(w, r, "/download?filename=output.docx", http.StatusSeeOther)
+	// Set the url to the download link
+	url := fmt.Sprintf("%s/download?filename=%s", BASE_URL, name)
+
+	// Send the download link to the client
+	w.Write([]byte(url))
 
 	// Delete the output file when the function returns
 	defer os.Remove("output.md")
