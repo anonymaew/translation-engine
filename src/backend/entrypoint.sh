@@ -6,5 +6,4 @@ ollama_pull() {
 	< models.txt xargs -I{} ollama pull {}
 }
 
-# ollama serve & ollama_pull & /gollama/gollama
-/gollama/gollama
+ollama serve & ollama_pull
