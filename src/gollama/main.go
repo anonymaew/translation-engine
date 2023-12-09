@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	BASE_URL="http://127.0.0.1:8080" // The base url for the server
+	BASE_URL="http://127.0.0.1" // The base url for the server
 	PORT = ":8080" // The port for the server
 	CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-" // The characters to use for the random string
 	LENGTH = 10 // The length of the random string
@@ -215,7 +215,7 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the url to the download link
-	url := fmt.Sprintf("%s/download?filename=%s", BASE_URL, name)
+	url := fmt.Sprintf("%s%s/download?filename=%s", BASE_URL, PORT, name)
 
 	// Send the download link to the client
 	w.Write([]byte(url))
