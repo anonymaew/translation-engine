@@ -1,0 +1,17 @@
+# --- build image ---
+FROM golang:alpine AS build
+
+# compile
+COPY . /gollama
+RUN cd /gollama && go build
+
+# --- production image ---
+FROM alpine
+
+# install pandoc
+RUN apk add --no-cache pandoc
+# get binary
+COPY --from=build /gollama/gollama /usr/local/bin/gollama
+
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/gollama"]
