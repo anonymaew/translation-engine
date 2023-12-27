@@ -21,18 +21,27 @@ type Response struct {
 }
 
 // Translate a string of text
-func Translate(text string, sourceLanguage string, targetLanguage string, customPrompt string) (string, error) {
+func Translate(text string, sourceLanguage string, targetLanguage string,
+	customPrompt string, customModel string) (string, error) {
 	// Array of response strings
 	var responses []string
 
-	// Prompt to be sent to the ollama api
+	// System prompt to be sent to the ollama api
 	var prompt string
 
-	// Format the prompt with the source and target languages if no custom prompt is provided
+	// Format the system prompt with the source and target languages if no custom prompt is provided
 	if customPrompt == "" {
-		prompt = fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text: \n\n%s", sourceLanguage, targetLanguage, text)
+		prompt = fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text", sourceLanguage, targetLanguage)
 	} else {
-		prompt = fmt.Sprintf("%s \n\n%s", customPrompt, text)
+		prompt = customPrompt
+	}
+
+	// Model to be sent to the ollama api, default to llama2 if no custom model is provided
+	var model string
+	if customModel == "" {
+		model = "llama2"
+	} else {
+		model = customModel
 	}
 
 	// Create the request url
@@ -40,8 +49,9 @@ func Translate(text string, sourceLanguage string, targetLanguage string, custom
 
 	// Format the request body
 	data, err := json.Marshal(map[string]string{
-		"model":  "llama2",
-		"prompt": prompt,
+		"model":  model,
+		"prompt": text,
+		"system": prompt,
 	})
 	if err != nil {
 		return "", err

@@ -36,6 +36,7 @@ type TranslateDocumentRequest struct {
 	SourceLanguage string `json:"source_language"`
 	TargetLanguage string `json:"target_language"`
 	CustomPrompt   string `json:"custom_prompt"`
+	Model          string `json:"model"`
 }
 
 func main() {
@@ -72,11 +73,13 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	jsonRequest.SourceLanguage = r.FormValue("source_language")
 	jsonRequest.TargetLanguage = r.FormValue("target_language")
 	jsonRequest.CustomPrompt = r.FormValue("custom_prompt")
+	jsonRequest.Model = r.FormValue("model")
 
 	// Access other form values as needed
 	sourceLanguage := jsonRequest.SourceLanguage
 	targetLanguage := jsonRequest.TargetLanguage
 	customPrompt := jsonRequest.CustomPrompt
+	model := jsonRequest.Model
 
 	// Access the file from the form data
 	file, _, err := r.FormFile("file")
@@ -121,6 +124,9 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	if customPrompt != "" {
 		logger.Println("Custom prompt:", customPrompt)
 	}
+	if model != "" {
+		logger.Println("Model:", model)
+	}
 
 	// Read the file
 	text := utils.ReadFile("temp.docx")
@@ -134,7 +140,7 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Println("Paragraph", i+1)
 
 		// Translate the paragraph
-		translation, err := utils.Translate(paragraph, sourceLanguage, targetLanguage, customPrompt)
+		translation, err := utils.Translate(paragraph, sourceLanguage, targetLanguage, customPrompt, model)
 		if err != nil {
 			http.Error(w, "Error translating", http.StatusInternalServerError)
 			logger.Println(err)
