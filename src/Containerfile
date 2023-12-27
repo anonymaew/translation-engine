@@ -1,0 +1,24 @@
+# --- build image ---
+FROM golang:alpine AS build
+
+# compile
+COPY ./gollama /gollama
+RUN cd /gollama && go build
+
+# --- production image ---
+FROM ollama/ollama
+
+# install pandoc
+RUN apt-get update && apt-get install -y \
+	curl \
+	pandoc \
+	ssh
+
+# get binary
+COPY --from=build /gollama/gollama /usr/local/bin/gollama
+
+# get chinese docx (temporary)
+COPY ./chinese.docx /chinese.docx
+
+EXPOSE 8080
+ENTRYPOINT ["/bin/sh", "-c", "ollama serve & /usr/local/bin/gollama"]

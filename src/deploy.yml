@@ -6,21 +6,13 @@ metadata:
   name: backend
 spec:
   containers:
-  - image: nsrichan/ai4humanities-translation-engine-backend
+  - image: nsrichan/ai4humanities-translation-engine
     name: backend
-
----
-
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    k8s-app: middleware
-  name: middleware
-spec:
-  containers:
-  - image: nsrichan/ai4humanities-translation-engine-gollama
-    name: middleware
+    resources:
+      limits:
+        cpu: 2
+        memory: 8Gi
+        nvidia.com/gpu: 2
 
 ---
 
@@ -33,10 +25,32 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 11434
+  - port: 8080
     protocol: TCP
-    targetPort: 11434
+    targetPort: 8080
   selector:
     k8s-app: backend
 
 ---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+  name: backend-ingress
+spec:
+  rules:
+  - host: dcct.nrp-nautilus.io
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 8080
+  tls:
+  - hosts:
+    - dcct.nrp-nautilus.io
