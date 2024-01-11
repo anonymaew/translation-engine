@@ -1,0 +1,15 @@
+# --- production image ---
+FROM nvidia/cuda:11.7.1-runtime-ubuntu22.04
+
+# install pandoc
+RUN apt-get update && apt-get install -y \
+	curl \
+	unzip \
+	vim
+
+# install ollama and bun
+RUN curl https://ollama.ai/install.sh | sh
+RUN curl https://bun.sh/install.sh | bash
+
+COPY entrypoint.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
