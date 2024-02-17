@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	BASE_URL="http://127.0.0.1" // The base url for the server
-	PORT = ":8080" // The port for the server
-	CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-" // The characters to use for the random string
-	LENGTH = 10 // The length of the random string
+	BASE_URL = "http://127.0.0.1"                                                // The base url for the server
+	PORT     = ":8080"                                                           // The port for the server
+	CHARS    = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-" // The characters to use for the random string
+	LENGTH   = 10                                                                // The length of the random string
 )
 
 type TranslateDocumentRequest struct {
@@ -131,16 +131,16 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	// Read the file
 	text := utils.ReadFile("temp.docx")
 
-	// Get an array of paragraphs from the file
-	paragraphs := utils.GetParagraphs(text)
+	// Get an array of sentences from the file
+	sentences := utils.GetSentences(text)
 
 	// Translate the file paragraph by paragraph
-	for i, paragraph := range paragraphs {
+	for i, sentence := range sentences {
 		// Log the paragraph number
 		logger.Println("Paragraph", i+1)
 
 		// Translate the paragraph
-		translation, err := utils.Translate(paragraph, sourceLanguage, targetLanguage, customPrompt, model)
+		translation, err := utils.Translate(sentence, sourceLanguage, targetLanguage, customPrompt, model)
 		if err != nil {
 			http.Error(w, "Error translating", http.StatusInternalServerError)
 			logger.Println(err)
