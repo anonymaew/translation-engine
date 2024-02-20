@@ -40,7 +40,7 @@ func callPandoc(filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return name+".md", nil
+	return name + ".md", nil
 }
 
 // Read the markdown file
@@ -76,10 +76,10 @@ func WriteMarkdown(data string, filename string) error {
 }
 
 // Split content into paragraphs
-func GetParagraphs(content string) []string {
-	// Split the content into paragraphs
-	paragraphs := strings.Split(content, "\n\n")
-	return paragraphs
+func GetSentences(content string) []string {
+	// Split the content into sentences
+	sentences := strings.Split(content, ". ")
+	return sentences
 }
 
 // Converts markdown to docx using pandoc
