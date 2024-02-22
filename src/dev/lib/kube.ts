@@ -26,6 +26,8 @@ const webName = (i: number, options: { num: number, name: string }) => options.n
     ? `${options.name}-${i}-dcct.nrp-nautilus.io`
     : `${options.name}-dcct.nrp-nautilus.io`;
 
+const webNameToPodName = (webName: string) => webName.split('-').slice(0, -1).join('-');
+
 const pod = (i:number, options: PodOptions) => {
   const name = podName(i, options);
   return {
@@ -217,11 +219,13 @@ const upKubernetes = (options: PodOptions) => async () => {
 
         const service_i = service(i, options);
         const service_script = new Response(JSON.stringify(service_i));
-        await exec`kubectl create -f - < ${service_script}`;
+        await exec`kubectl create -f - < ${service_script}`
+          .catch((e) => { if (!e.includes('AlreadyExists')) return Promise.reject(e); });
 
         const ingress_i = ingress(i, options);
         const ingress_script = new Response(JSON.stringify(ingress_i));
-        await exec`kubectl create -f - < ${ingress_script}`;
+        await exec`kubectl create -f - < ${ingress_script}`
+          .catch((e) => { if (!e.includes('AlreadyExists')) return Promise.reject(e); });
 
         console.log('Cold start, waiting for 10 seconds');
         await new Promise(resolve => setTimeout(resolve, 10000));
@@ -239,7 +243,7 @@ const downKubernetes = (options: PodOptions) => async () => {
     
   console.log('Cleaning up kubernetes resources');
   await Promise.all(
-    Array.from({ length: num }, (_, i) => i + 1)
+    Array.from({ length: options.num }, (_, i) => i + 1)
     .map(async i => {
       const name = podName(i, options);
       console.log(`Deleting pod ${name}`);
@@ -253,7 +257,14 @@ const useKubernetes = curryWrap(
   downKubernetes
 );
 
+const restartKubernetes = async (podOption: PodOptions) => {
+  console.log('Restarting kubernetes resources');
+  await downKubernetes({ ...podOption, standby: false })();
+  await upKubernetes(podOption)();
+}
+
 export {
   useKubernetes,
   webName,
+  restartKubernetes
 };

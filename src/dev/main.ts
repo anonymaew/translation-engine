@@ -1,46 +1,3 @@
-import { $ } from 'bun';
-import { JobManager } from './lib/sem';
-
-// the real task, translate a file with a model
-const task = async (filename, model) => {
-  const file = Bun.file(`${filename}.md`);
-  const text = await file.text();
-  const paragraphs = new Paragraphs(text)
-    .removeFootnotes()
-    .clump(512);
-
-  console.log(paragraphs.paragraphs.map(p => p.length));
-  const num_workers = 4;
-  const workers = Array(num_workers)
-    .fill(0)
-    .map((_,i) =>
-      (job) => 
-        translate(`https://${i+1}-dcct.nrp-nautilus.io` , job.p, job.model)
-    );
-  const jobs = paragraphs.paragraphs
-    .map(p => ({ p, model }));
-  const manager = new JobManager(workers, {
-      verbose: true,
-      cache: true,
-    });
-  const translated = await manager.run(jobs);
-
-  // const data = regroup_text_footnotes(translated);
-  const data = translated.join('\n\n');
-  await Bun.write(`${filename}-translated-${model}.md`, data);
-};
-
-const models:string[] = [
-  // 'llama2',
-  'mistral:latest',
-  // 'llama2-uncensored',
-  // 'mixtral:latest',
-]
-
-// for (const model of models) {
-//   await task('chinese', model);
-// }
-
 import { useKubernetes } from './lib/kube';
 import { curryCompose } from './lib/curry';
 import {
@@ -56,7 +13,7 @@ import {
   clumpText
 } from './lib/doctext';
 
-const filename = 'chinese.md';
+const filename = 'chinese.docx';
 const src = 'Chinese';
 const tar = 'English';
 const translatePod = {
@@ -80,9 +37,9 @@ const translateOptions = {
   model: 'mistral:latest',
   options: {
     temperature: 0, 
+    num_ctx: 4096,
   },
-  src,
-  tar,
+  prompt: `Ignore the ${tar} text. Please translate a given ${src} sentence into short ${tar}, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text`,
   mode: TranslateMode.Seq
 };
 
@@ -90,9 +47,9 @@ const pipeline = curryCompose(
   useKubernetes(translatePod),
   useKubernetes(entityPod),
   fileToMDString(filename),
+  removeFootnotes(),
   splitBySentences(),
   replaceTranslateNouns(src, tar, translatePod, entityPod),
-  removeFootnotes(),
   translateText(translateOptions, translatePod),
 ) 
 

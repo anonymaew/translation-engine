@@ -1,6 +1,6 @@
 import { $ } from 'bun';
 import { curryWrap } from './curry';
-import { webName } from './kube';
+import { webName, restartKubernetes } from './kube';
 
 const model_check = async (server, model) => {
   const res = await fetch(`${server}/api/tags`);
@@ -23,16 +23,13 @@ const model_check = async (server, model) => {
 
 enum TranslateMode {
   Non = 'no context',
-  Seq = 'sequential',
-  Sec = 'sequential with context window',
+  Seq = 'sequential with context window',
 }
 
 type TranslateOptions = {
   model: string,
   options: any,
-  prompt?: string,
-  src: string,
-  tar: string,
+  prompt: string,
   mode: TranslateMode,
 };
 
@@ -68,7 +65,7 @@ const translateJob = async (server, messages, options) => {
   // tell the model to abort if timeout, otherwise we lose control
   if (!res.ok) {
     controller.abort();
-    return Promise.reject(res.statusText);
+    return Promise.reject('LLM server just hung up, may need to restart the pod.');
   }
 
   const json = await res.json();
@@ -78,30 +75,44 @@ const translateJob = async (server, messages, options) => {
 };
 
 const translate = (options: TranslateOptions, pod: PodOptions) => async (texts: string[]) => {
-  const result = [];
+  const pastResult = [];
   const window = 10;
-  const system = `Ignore the ${options.tar} text. Please translate a given ${options.src} sentence into ${options.tar}. Please do not add more notes or explanations.`;
   const server = `https://${webName(1, pod)}`;
+  const result = [];
 
-  for (const text of texts) {
+  for (let i = 0; i < texts.length; i++) {
+    const text = texts[i];
+
     if (isNothing(text))
       continue;
-    const prev = (options.mode === TranslateMode.Sec)
-      ? result.slice(-2 * window)
+    const prev = (options.mode === TranslateMode.Seq)
+      ? pastResult.slice(-2 * window)
       : [];
     const messages = [
-      { role: 'system', content: options.prompt || system },
+      { role: 'system', content: options.prompt },
       ...prev,
       { role: 'user', content: text },
     ];
-    const translated = await translateJob(server, messages, options);
-    result.push({ role: 'user', content: text });
-    result.push({ role: 'assistant', content: translated });
-    console.log(result.slice(-2 * window));
+    const translated = await translateJob(server, messages, options)
+      .catch(async (err) => {
+        if (err !== 'LLM server just hung up, may need to restart the pod.')
+          return Promise.reject(err);
+        console.log(`LLM server hung up, restarting...`);
+        await restartKubernetes(pod);
+        i--;
+        return '';
+      });
+    if (translated === '')
+      continue;
+
+    if (options.mode === TranslateMode.Seq) {
+      pastResult.push({ role: 'user', content: text });
+      pastResult.push({ role: 'assistant', content: translated });
+    }
+    result.push(translated);
+    console.log(`[User]----------------------------------------\n${text}\n[Assistant]----------------------------------------\n${translated}`);
   }
-  return result
-    .filter(m => m.role === 'assistant')
-    .map(m => m.content);
+  return result;
 };
 
 const translateText = curryWrap(
@@ -130,7 +141,6 @@ const extractNouns = async (server: string, text: string, lang: string) => {
     }
   );
   if (!res.ok) {
-    console.log('response not ok');
     return Promise.reject(res.statusText);
   }
 
@@ -181,9 +191,7 @@ const replaceNouns = (src: string, tar: string, translatePod: PodOptions, entity
     options: {
       temperature: 0.4,
     },
-    src,
-    tar,
-    mode: TranslateMode.Seq,
+    mode: TranslateMode.Non,
   };
   const nouns = await extractNouns(entityServer, text, src);
   const translatedNouns = await translateNouns(nouns, translateOptions, translatePod);

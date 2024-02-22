@@ -17,7 +17,7 @@ const convertToMD = (filename: string) => async () => {
 
   console.log(`Converting ${filename} to markdown...`);
 
-  const res = await exec`pandoc -t markdown --extract-media temp ${filename} | sed 's/。/\. /g' | pandoc -t markdown`;
+  const res = await exec`pandoc -t markdown --extract-media temp ${filename}`;
   return res;
 }
 
@@ -54,23 +54,16 @@ const splitByParagraphs = curryWrap(
   paragraphsToString
 );
 
-const stringToSentences = () => async (md: string): string[] =>
-  md.split('\n')
-    .map(p => p
-      .split(/[.!?。]/)
-      .map(s => s.trim())
-      .filter(s => s.length > 0)
-    )
-    .map(p => [...p, '\n\n'])
-    .flat();
+const stringToSentences = () => async (md: string): string[] => {
+  const mod = md.replaceAll('。', '. ');
+  const res = await exec`pandoc -t markdown < ${new Response(mod)}`;
+  return res.split('\n')
+    .map(p => p.trim())
+    .map(p => (p === '') ? '\n' : p);
+}
 
 const sentencesToString = () => async (md: string[]): string =>
-  md.
-    reduce((acc, s) => {
-      if (s === '\n\n')
-        return acc + s;
-      return acc + s + '. ';
-    }, '');
+  md.join('\n');
 
 const splitBySentences = curryWrap(
   stringToSentences,
@@ -78,11 +71,13 @@ const splitBySentences = curryWrap(
 );
 
 const removeFootnotes = curryWrap(
-  () => async (md: string[]) => {
+  () => async (md: string) => {
     console.log('Removing footnotes...');
     return md
+      .split('\n\n')
       .filter(p => !p.match(regex_footnote))
-      .map(p => p.replace(regex_footnotemark, ''));
+      .map(p => p.replace(regex_footnotemark, ''))
+      .join('\n\n');
   },
   () => async (md: string[]) => md
 );
