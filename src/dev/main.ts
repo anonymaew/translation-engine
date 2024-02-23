@@ -3,8 +3,9 @@ import { curryCompose } from './lib/curry';
 import {
   replaceTranslateNouns,
   translateText,
-  TranslateMode
+  rewriteText
 } from './lib/translate';
+import { ModeGenerate } from './lib/ollama';
 import {
   fileToMDString,
   splitByParagraphs,
@@ -16,6 +17,7 @@ import {
 const filename = 'chinese.docx';
 const src = 'Chinese';
 const tar = 'English';
+
 const translatePod = {
   num: 1,
   name: 'translate',
@@ -33,15 +35,32 @@ const entityPod = {
   gpu: 'NVIDIA-A10',
   standby: true,
 };
-const translateOptions = {
+
+const translateEntityOptions = {
+  model: 'mistral:latest',
+  options: {
+    temperature: 0.4,
+  },
+  prompt: `Translate the following list of ${src} entities into short ${tar}.`,
+  mode: ModeGenerate.Non,
+};
+const translateMainOptions = {
   model: 'mistral:latest',
   options: {
     temperature: 0, 
     num_ctx: 4096,
   },
-  prompt: `Ignore the ${tar} text. Please translate a given ${src} sentence into short ${tar}, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text`,
-  mode: TranslateMode.Seq
+  prompt: `Ignore the ${tar} text. Please translate the given ${src} sentence into formal and academic ${tar} without any comment or discussion. Do not include any additional discussion or comment.`,
+  mode: ModeGenerate.Non,
 };
+const rewriteOptions = {
+  model: 'mistral:latest',
+  options: {
+    temperature: 0.4,
+  },
+  prompt: `Rewrite the following sentence into formal and academic ${tar}. do not include any additional discussion or comment.`,
+  mode: ModeGenerate.Non,
+}
 
 const pipeline = curryCompose(
   useKubernetes(translatePod),
@@ -49,8 +68,9 @@ const pipeline = curryCompose(
   fileToMDString(filename),
   removeFootnotes(),
   splitBySentences(),
-  replaceTranslateNouns(src, tar, translatePod, entityPod),
-  translateText(translateOptions, translatePod),
+  // replaceTranslateNouns(translatePod, entityPod, translateEntityOptions, src),
+  translateText(translatePod, translateMainOptions),
+  rewriteText(translatePod, rewriteOptions),
 ) 
 
 await pipeline();

@@ -1,5 +1,5 @@
 import { exec } from './shell';
-import { curryWrap } from './curry';
+import { curryWrap, curryTop } from './curry';
 
 const regex_footnotemark = /\[\^(\d+)\]/g;
 const regex_footnote = /\[\^(\d+)\]:\s*(.*)/g;
@@ -70,7 +70,7 @@ const splitBySentences = curryWrap(
   sentencesToString
 );
 
-const removeFootnotes = curryWrap(
+const removeFootnotes = curryTop(
   () => async (md: string) => {
     console.log('Removing footnotes...');
     return md
@@ -78,8 +78,7 @@ const removeFootnotes = curryWrap(
       .filter(p => !p.match(regex_footnote))
       .map(p => p.replace(regex_footnotemark, ''))
       .join('\n\n');
-  },
-  () => async (md: string[]) => md
+  }
 );
 
 const clumpParagraphs = (chars: number) => async (paragraphs: string[]) =>
