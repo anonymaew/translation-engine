@@ -2,8 +2,7 @@ output.*
 *.txt
 *.log
 temp.*
-curl_out.docx
-translated_output.docx
-old-translated_output.docx
+*.docx
 translated_output.md
 test.sh
+downloads/
