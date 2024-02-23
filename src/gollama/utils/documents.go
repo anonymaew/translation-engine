@@ -77,9 +77,16 @@ func WriteMarkdown(data string, filename string) error {
 
 // Split content into paragraphs
 func GetSentences(content string) []string {
-	// Split the content into sentences
-	sentences := strings.Split(content, ". ")
-	return sentences
+	// Split the content into sentences using the . and 。
+	if strings.Contains(content, "。") {
+		fmt.Println("Chinese")
+		sentences := strings.Split(content, "。")
+		return sentences
+	} else {
+		fmt.Println("English")
+		sentences := strings.Split(content, ".")
+		return sentences
+	}
 }
 
 // Converts markdown to docx using pandoc

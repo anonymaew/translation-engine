@@ -22,7 +22,7 @@ type Response struct {
 
 // Translate a string of text
 func Translate(text string, sourceLanguage string, targetLanguage string,
-	customPrompt string, customModel string) (string, error) {
+	customPrompt string, customModel string, opts Options) (string, error) {
 	// Array of response strings
 	var responses []string
 
@@ -31,7 +31,7 @@ func Translate(text string, sourceLanguage string, targetLanguage string,
 
 	// Format the system prompt with the source and target languages if no custom prompt is provided
 	if customPrompt == "" {
-		prompt = fmt.Sprintf("Translate the following %s text into academic %s, focusing on preserving the content, tone, and sentiment. Do not include any discussion, provide only the translated text", sourceLanguage, targetLanguage)
+		prompt = fmt.Sprintf("Please translate the given %s sentence into formal and academic %s without any comment or discussion. Do not include any additional discussion or comment.", sourceLanguage, targetLanguage)
 	} else {
 		prompt = customPrompt
 	}
@@ -53,9 +53,15 @@ func Translate(text string, sourceLanguage string, targetLanguage string,
 		"prompt": text,
 		"system": prompt,
 	})
-	if err != nil {
-		return "", err
-	}
+
+	// Marshal the options object
+	optsData, err := json.Marshal(map[string]interface{}{
+		"temperature": opts.Temperature,
+		"num_ctx":     opts.Context,
+	})
+
+	// Add the options to the request body inside the options object
+	data = []byte(strings.Replace(string(data), "}", ",\"options\":"+string(optsData)+"}", 1))
 
 	// Create the request
 	req, err := http.NewRequest("POST", url, strings.NewReader(string(data)))

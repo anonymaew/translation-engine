@@ -37,6 +37,7 @@ type TranslateDocumentRequest struct {
 	TargetLanguage string `json:"target_language"`
 	CustomPrompt   string `json:"custom_prompt"`
 	Model          string `json:"model"`
+	Options        string `json:"options"`
 }
 
 func main() {
@@ -74,12 +75,14 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	jsonRequest.TargetLanguage = r.FormValue("target_language")
 	jsonRequest.CustomPrompt = r.FormValue("custom_prompt")
 	jsonRequest.Model = r.FormValue("model")
+	jsonRequest.Options = r.FormValue("options")
 
 	// Access other form values as needed
 	sourceLanguage := jsonRequest.SourceLanguage
 	targetLanguage := jsonRequest.TargetLanguage
 	customPrompt := jsonRequest.CustomPrompt
 	model := jsonRequest.Model
+	opts, err := utils.ParseOptions(jsonRequest.Options) // Parse the options string into a map
 
 	// Access the file from the form data
 	file, _, err := r.FormFile("file")
@@ -127,6 +130,7 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	if model != "" {
 		logger.Println("Model:", model)
 	}
+	logger.Println("Options:", opts.String()) // Log the options as a string
 
 	// Read the file
 	text := utils.ReadFile("temp.docx")
@@ -134,13 +138,14 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	// Get an array of sentences from the file
 	sentences := utils.GetSentences(text)
 
-	// Translate the file paragraph by paragraph
+	// Translate the file sentence by sentence
 	for i, sentence := range sentences {
-		// Log the paragraph number
+		// Log the sentence number
 		logger.Println("Sentence", i+1)
 
-		// Translate the paragraph
-		translation, err := utils.Translate(sentence, sourceLanguage, targetLanguage, customPrompt, model)
+		// Translate the sentence
+		translation, err := utils.Translate(sentence, sourceLanguage, targetLanguage, customPrompt, model, opts)
+
 		if err != nil {
 			http.Error(w, "Error translating", http.StatusInternalServerError)
 			logger.Println(err)
@@ -148,7 +153,7 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Append the translated paragraph to the output file
+		// Append the translated sentence to the output file
 		utils.WriteMarkdown(translation, "output.md")
 	}
 
