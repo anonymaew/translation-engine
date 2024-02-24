@@ -136,7 +136,10 @@ func translateDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	text := utils.ReadFile("temp.docx")
 
 	// Get an array of sentences from the file
-	sentences := utils.GetSentences(text)
+	// sentences := utils.GetSentences(text)
+
+	// slice with the entire text
+	sentences := []string{text}
 
 	// Translate the file sentence by sentence
 	for i, sentence := range sentences {
