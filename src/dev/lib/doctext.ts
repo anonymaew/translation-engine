@@ -6,9 +6,9 @@ const regex_footnote = /\[\^(\d+)\]:\s*(.*)/g;
 
 const supportedExtensions = ['md', 'docx', 'txt'];
 
-const convertToMD = (filename: string) => async () => {
+const convertToMD = ({filename}: {filename:string}) => async () => {
   const fileExt = filename.split('.').pop();
-  if (!supportedExtensions.includes(fileExt))
+  if (fileExt !== undefined && !supportedExtensions.includes(fileExt))
     return Promise.reject(`Unsupported file type: ${fileExt}`);
 
   await exec`rm -rf temp`.catch(
@@ -21,7 +21,7 @@ const convertToMD = (filename: string) => async () => {
   return res;
 }
 
-const mdToFile = (filename: string) => async (md: string) => {
+const mdToFile = ({filename}: {filename: string}) => async (md: string) => {
   const fileExt = filename.split('.').pop();
   const newFilename = `${filename.split('.').slice(0, -1)[0]}-translated.${fileExt}`
 
@@ -54,7 +54,7 @@ const splitByParagraphs = curryWrap(
   paragraphsToString
 );
 
-const stringToSentences = () => async (md: string): string[] => {
+const stringToSentences = () => async (md: string) => {
   const mod = md.replaceAll('。', '. ');
   const res = await exec`pandoc -t markdown < ${new Response(mod)}`;
   return res.split('\n')
@@ -62,7 +62,7 @@ const stringToSentences = () => async (md: string): string[] => {
     .map(p => (p === '') ? '\n' : p);
 }
 
-const sentencesToString = () => async (md: string[]): string =>
+const sentencesToString = () => async (md: string[]) =>
   md.join('\n');
 
 const splitBySentences = curryWrap(

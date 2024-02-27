@@ -146,7 +146,7 @@ const getPodsStatus = async (pods: PodOptions) => {
   return res;
 }
 
-const waitPodUntilReady = async (i, pods: PodOptions) => {
+const waitPodUntilReady = async (i: number, pods: PodOptions) => {
   while (true) {
     const podsStatus = await getPodsStatus(pods);
     if (podsStatus[i] === 'NotFound')
@@ -181,7 +181,10 @@ const checkAvailability = async (options: PodOptions) => {
       })
     }
   );
-  const json = await response.json();
+  const json: {
+    result: {Nodes: {GPUType: string, GPUAvailable: number, Taints: string[]}[]},
+    error?: string
+  } = await response.json();
   if (json.error)
     return Promise.reject(json.error);
   
@@ -192,7 +195,7 @@ const checkAvailability = async (options: PodOptions) => {
     .reduce((a, b) => a + b, 0);
 }
 
-const upKubernetes = (options: PodOptions) => async () => {
+const upKubernetes = ({options}: {options: PodOptions}) => async () => {
   console.log('Preparing kubernetes resources');
 
   const available = await checkAvailability(options);
@@ -235,7 +238,7 @@ const upKubernetes = (options: PodOptions) => async () => {
   );
 }
 
-const downKubernetes = (options: PodOptions) => async () => {
+const downKubernetes = ({options}: {options: PodOptions}) => async () => {
   if (options.standby) {
     console.log('Standby mode, skipping cleanup');
     return;
@@ -257,14 +260,15 @@ const useKubernetes = curryWrap(
   downKubernetes
 );
 
-const restartKubernetes = async (podOption: PodOptions) => {
+const restartKubernetes = async (options: PodOptions) => {
   console.log('Restarting kubernetes resources');
-  await downKubernetes({ ...podOption, standby: false })();
-  await upKubernetes(podOption)();
+  await downKubernetes({options: {...options, standby: true}})();
+  await upKubernetes({options})();
 }
 
 export {
   useKubernetes,
   webName,
-  restartKubernetes
+  restartKubernetes,
+  PodOptions
 };

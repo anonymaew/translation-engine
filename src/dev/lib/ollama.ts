@@ -1,4 +1,4 @@
-import { webName, restartKubernetes } from './kube';
+import { webName, restartKubernetes, PodOptions } from './kube';
 
 enum ModeGenerate {
   Par = 'parallel',
@@ -15,13 +15,24 @@ type LLMOptions = {
   validation?: (org: string, res: string) => boolean,
 };
 
+enum MessageRole {
+  User = 'user',
+  System = 'system',
+  Assistant = 'assistant',
+}
+
+type Message = {
+  role: MessageRole,
+  content: string,
+};
+
 const isNothing = (text: string) => text === '' || text === '\n' || text === '\n\n';
 
 // checking whether the machine has the model
-const model_check = async (server, model) => {
+const model_check = async (server: string, model: string) => {
   // get all local models
   const res = await fetch(`${server}/api/tags`);
-  const json = await res.json();
+  const json: {models: {name: string}[]} = await res.json();
   const exists = json.models.some(m => m.name === model);
   // if not exists, pull the model via api
   if (!exists) {
@@ -40,7 +51,7 @@ const model_check = async (server, model) => {
 };
 
 // handling single api request
-const chatJob = async (server, llm, messages) => {
+const chatJob = async (server: string, llm: LLMOptions, messages: Message[]) => {
   await model_check(server, llm.model);
 
   // controller for timeout
@@ -75,7 +86,7 @@ const chatJob = async (server, llm, messages) => {
     return Promise.reject('LLM server just hung up, may need to restart the pod.');
   }
 
-  const json = await res.json();
+  const json: {message:Message} = await res.json();
   const para = json.message.content.trim();
 
   return para;
@@ -83,7 +94,7 @@ const chatJob = async (server, llm, messages) => {
 
 // handling multiple texts (depends on mode)
 const chatTask = async (pod: PodOptions, llm: LLMOptions, jobs: string[]) => {
-  const pastResult = [];
+  const pastResult: Message[] = [];
   const result = [];
   const server = `https://${webName(1, pod)}`;
 
@@ -95,12 +106,12 @@ const chatTask = async (pod: PodOptions, llm: LLMOptions, jobs: string[]) => {
       continue;
     }
     const prev = (llm.mode === ModeGenerate.Seq)
-      ? pastResult.slice(-2 * llm.window)
+      ? pastResult.slice(-2 * (llm.window || 0))
       : [];
     const messages = [
-      { role: 'system', content: llm.prompt },
+      { role: MessageRole.System, content: llm.prompt },
       ...prev,
-      { role: 'user', content: text },
+      { role: MessageRole.User, content: text },
     ];
     const response = await chatJob(server, llm, messages)
       .catch(async (err) => {
@@ -120,8 +131,8 @@ const chatTask = async (pod: PodOptions, llm: LLMOptions, jobs: string[]) => {
     }
 
     if (llm.mode === ModeGenerate.Seq) {
-      pastResult.push({ role: 'user', content: text });
-      pastResult.push({ role: 'assistant', content: response });
+      pastResult.push({ role: MessageRole.User, content: text });
+      pastResult.push({ role: MessageRole.Assistant, content: response });
     }
     result.push(response);
     console.log(`[User]----------------------------------------\n${text}\n[Assistant]----------------------------------------\n${response}`);

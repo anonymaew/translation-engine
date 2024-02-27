@@ -1,6 +1,6 @@
 import { curryTop } from './curry';
-import { webName } from './kube';
-import { chatTask } from './ollama';
+import { webName, PodOptions } from './kube';
+import { chatTask, LLMOptions } from './ollama';
 
 const nounSupportedLangs = [
   { lang: 'Catalan', code: 'ca', model: 'ca_core_news_sm' },
@@ -30,14 +30,15 @@ const nounSupportedLangs = [
 ];
 
 const translateText = curryTop(
-  (pod: PodOptions, llm: LLMOptions) => async (texts: string[]) => {
+  ({pod,llm}: {pod: PodOptions, llm: LLMOptions}) => async (texts: string[]) => {
     const translated = await chatTask(pod, llm, texts);
     return translated;
   }
 );
 
 const extractNouns = async (server: string, text: string, lang: string) => {
-  if (nounSupportedLangs.map(l => l.lang).indexOf(lang) === -1) {
+  const theLang = nounSupportedLangs.find(l => l.lang === lang);
+  if (theLang === undefined) {
     console.log(`Language ${lang} not supported, skip entity extraction.`);
     return [];
   }
@@ -52,7 +53,7 @@ const extractNouns = async (server: string, text: string, lang: string) => {
       },
       body: JSON.stringify({
         text,
-        lang: nounSupportedLangs.find(l => l.lang === lang).model,
+        lang: theLang.model,
       }),
     }
   );
@@ -60,7 +61,7 @@ const extractNouns = async (server: string, text: string, lang: string) => {
     return Promise.reject(res.statusText);
   }
 
-  const json = await res.json();
+  const json: {list: string[]} = await res.json();
   const nouns = json.list
     .map(n => n.trim());
   return nouns;
@@ -77,7 +78,7 @@ const dontLostItems = (text1: string, text2: string) =>
 const translateNouns = async (pod: PodOptions, options: LLMOptions, nouns: string[]) => {
   console.log(`Translating entities...`);
   const clumps = nouns
-    .reduce((acc, n) => {
+    .reduce((acc: string[][], n: string) => {
       if (acc.length === 0 || acc[acc.length - 1].length + n.length > 32)
         return [...acc, [n]];
       return [...acc.slice(0, -1), [...acc[acc.length - 1], n]];
@@ -94,7 +95,15 @@ const translateNouns = async (pod: PodOptions, options: LLMOptions, nouns: strin
     .flat();
 }
 
-const replaceNouns = (translatePod: PodOptions, entityPod: PodOptions, translateEntityOptions: LLMOptions, src: string) => async (texts: string[]) => {  
+const replaceNouns = (
+  { translatePod, entityPod, translateEntityOptions, src }:
+  {
+    translatePod: PodOptions,
+    entityPod: PodOptions,
+    translateEntityOptions: LLMOptions,
+    src: string
+  }
+) => async (texts: string[]) => {  
   const text = texts.join('\n');
   const entityServer = `https://${webName(1, entityPod)}`;
   const nouns = await extractNouns(entityServer, text, src);
@@ -110,7 +119,7 @@ const replaceNouns = (translatePod: PodOptions, entityPod: PodOptions, translate
 const replaceTranslateNouns = curryTop(replaceNouns);
 
 const rewriteText = curryTop(
-  (pod: PodOptions, llm: LLMOptions) => async (texts: string[]) => {
+  ({ pod, llm }: {pod: PodOptions, llm: LLMOptions}) => async (texts: string[]) => {
     const rewrites = await chatTask(pod, llm, texts);
     return rewrites;
   }

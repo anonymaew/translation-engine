@@ -48,7 +48,7 @@ const translateMainOptions = {
   model: 'mistral:latest',
   options: {
     temperature: 0, 
-    num_ctx: 4096,
+    // num_ctx: 4096,
   },
   prompt: `Ignore the ${tar} text. Please translate the given ${src} sentence into formal and academic ${tar} without any comment or discussion. Do not include any additional discussion or comment.`,
   mode: ModeGenerate.Non,
@@ -56,21 +56,21 @@ const translateMainOptions = {
 const rewriteOptions = {
   model: 'mistral:latest',
   options: {
-    temperature: 0.4,
+    temperature: 0,
   },
   prompt: `Rewrite the following sentence into formal and academic ${tar}. do not include any additional discussion or comment.`,
   mode: ModeGenerate.Non,
 }
 
 const pipeline = curryCompose(
-  useKubernetes(translatePod),
-  useKubernetes(entityPod),
-  fileToMDString(filename),
+  useKubernetes({options: translatePod}),
+  // useKubernetes(entityPod),
+  fileToMDString({filename}),
   removeFootnotes(),
   splitBySentences(),
   // replaceTranslateNouns(translatePod, entityPod, translateEntityOptions, src),
-  translateText(translatePod, translateMainOptions),
-  rewriteText(translatePod, rewriteOptions),
+  translateText({pod: translatePod, llm: translateMainOptions}),
+  // rewriteText(translatePod, rewriteOptions),
 ) 
 
 await pipeline();
