@@ -29,6 +29,11 @@ const nounSupportedLangs = [
   { lang: 'Ukrainian', code: 'uk', model: 'uk_core_news_sm' },
 ];
 
+type EntityOptions = {
+  src: string,
+  label: string[],
+};
+
 const translateText = curryTop(
   ({ pod, llm }: { pod: PodOptions, llm: LLMOptions }) => async (texts: string[]) => {
     const translated = await chatTask(pod, llm, texts);
@@ -36,14 +41,14 @@ const translateText = curryTop(
   }
 );
 
-const extractNouns = async (server: string, text: string, lang: string) => {
-  const theLang = nounSupportedLangs.find(l => l.lang === lang);
+const extractNouns = async (server: string, text: string, options: EntityOptions) => {
+  const theLang = nounSupportedLangs.find(l => l.lang === options.src);
   if (theLang === undefined) {
-    console.log(`Language ${lang} not supported, skip entity extraction.`);
+    console.log(`Language ${options.src} not supported, skip entity extraction.`);
     return [];
   }
 
-  console.log(`Extracting ${lang} entities...`);
+  console.log(`Extracting ${options.src} entities...`);
   const res = await fetch(
     server,
     {
@@ -54,6 +59,8 @@ const extractNouns = async (server: string, text: string, lang: string) => {
       body: JSON.stringify({
         text,
         lang: theLang.model,
+        // label: ['PERSON', 'GPE', 'LOC', 'ORG', 'FAC', 'EVENT', 'NORP', 'WORK_OF_ART', 'PRODUCT'],
+        label: options.label,
       }),
     }
   );
@@ -96,17 +103,17 @@ const translateNouns = async (pod: PodOptions, options: LLMOptions, nouns: strin
 }
 
 const replaceNouns = (
-  { translatePod, entityPod, translateEntityOptions, src }:
+  { translatePod, entityPod, translateEntityOptions, extractEntityOptions }:
     {
       translatePod: PodOptions,
       entityPod: PodOptions,
       translateEntityOptions: LLMOptions,
-      src: string
+      extractEntityOptions: EntityOptions,
     }
 ) => async (texts: string[]) => {
   const text = texts.join('\n');
   const entityServer = `https://${webName(1, entityPod)}`;
-  const nouns = await extractNouns(entityServer, text, src);
+  const nouns = await extractNouns(entityServer, text, extractEntityOptions);
   const translatedNouns = await translateNouns(translatePod, translateEntityOptions, nouns);
   const nounDict = nouns
     .map((n, i) => ({ noun: n, translated: translatedNouns[i] }));

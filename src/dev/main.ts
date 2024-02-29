@@ -43,6 +43,11 @@ const translateEntityOptions = {
   prompt: `Translate the following list of ${src} entities into short ${tar}.`,
   mode: ModeGenerate.Non,
 };
+const extractEntityOptions = {
+  src,
+  // label: ['PERSON', 'GPE', 'LOC', 'ORG', 'FAC', 'EVENT', 'NORP', 'WORK_OF_ART', 'PRODUCT'],
+  label: ['PERSON', 'NORP', 'WORK_OF_ART'],
+};
 const translateMainOptions = {
   model: 'mistral:latest',
   options: {
@@ -68,7 +73,7 @@ const pipeline = curryCompose(
   removeFootnotes({}),
   // splitBySentences(),
   splitByParagraphs({}),
-  replaceTranslateNouns({ translatePod, entityPod, translateEntityOptions, src }),
+  replaceTranslateNouns({ translatePod, entityPod, translateEntityOptions, extractEntityOptions }),
   translateText({ pod: translatePod, llm: translateMainOptions }),
   rewriteText({ pod: translatePod, llm: rewriteOptions }),
 )
