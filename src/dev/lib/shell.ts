@@ -7,7 +7,7 @@ const checkProgram = async (program: string) => {
   return Promise.resolve();
 };
 
-const exec = async (strings: TemplateStringsArray, ...values: any[]) => {
+const exec = async (strings: TemplateStringsArray, ...values: any[]): Promise<string> => {
   const { stdout, stderr, exitCode } = await $(strings, ...values).quiet();
   if (exitCode !== 0)
     return Promise.reject(stderr.toString());

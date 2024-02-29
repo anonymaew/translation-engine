@@ -1,34 +1,29 @@
-import { checkProgram, exec } from './shell';
+import { exec } from './shell';
 import { curryWrap } from './curry';
-
-const IMAGE = 'ollama/ollama:0.1.22';
-const GPU = 'NVIDIA-A10';
 
 type PodOptions = {
   num: number,
   name: string,
   image: string,
   gpu?: string,
-  command: string[],
+  command?: string[],
   port?: number,
   standby?: boolean,
 };
 
 const podName = (i: number, options: { num: number, name: string }) => options.num > 1
-    ? `${options.name}-pod-${i}`
-    : `${options.name}-pod`;
+  ? `${options.name}-pod-${i}`
+  : `${options.name}-pod`;
 
 const serviceName = (i: number, options: { num: number, name: string }) => options.num > 1
-    ? `${options.name}-${i}`
-    : `${options.name}`;
+  ? `${options.name}-${i}`
+  : `${options.name}`;
 
 const webName = (i: number, options: { num: number, name: string }) => options.num > 1
-    ? `${options.name}-${i}-dcct.nrp-nautilus.io`
-    : `${options.name}-dcct.nrp-nautilus.io`;
+  ? `${options.name}-${i}-dcct.nrp-nautilus.io`
+  : `${options.name}-dcct.nrp-nautilus.io`;
 
-const webNameToPodName = (webName: string) => webName.split('-').slice(0, -1).join('-');
-
-const pod = (i:number, options: PodOptions) => {
+const pod = (i: number, options: PodOptions) => {
   const name = podName(i, options);
   return {
     apiVersion: 'v1',
@@ -71,20 +66,22 @@ const pod = (i:number, options: PodOptions) => {
         nodeAffinity: {
           requiredDuringSchedulingIgnoredDuringExecution: {
             nodeSelectorTerms: [{
-                matchExpressions: [{
-                    key: 'nvidia.com/gpu.product',
-                    operator: 'In',
-                    values: [ options.gpu ]
-                  }
-                ]}
-            ]}
+              matchExpressions: [{
+                key: 'nvidia.com/gpu.product',
+                operator: 'In',
+                values: [options.gpu]
+              }
+              ]
+            }
+            ]
+          }
         }
       } : undefined
     }
   };
 };
 
-const service = (i:number, options: PodOptions) => {
+const service = (i: number, options: PodOptions) => {
   const name = serviceName(i, options);
   return {
     apiVersion: 'v1',
@@ -101,7 +98,7 @@ const service = (i:number, options: PodOptions) => {
   };
 };
 
-const ingress = (i:number, options: PodOptions) => {
+const ingress = (i: number, options: PodOptions) => {
   const name = serviceName(i, options);
   return {
     apiVersion: 'networking.k8s.io/v1',
@@ -182,27 +179,27 @@ const checkAvailability = async (options: PodOptions) => {
     }
   );
   const json: {
-    result: {Nodes: {GPUType: string, GPUAvailable: number, Taints: string[]}[]},
+    result: { Nodes: { GPUType: string, GPUAvailable: number, Taints: string[] }[] },
     error?: string
   } = await response.json();
   if (json.error)
     return Promise.reject(json.error);
-  
+
   return json.result.Nodes
     .filter(node => options.gpu ? node.GPUType === options.gpu : true)
-    .filter(node => node.Taints.length === 0)
+    .filter(node => node.Taints?.length || 0 === 0)
     .map(node => +(node.GPUAvailable))
     .reduce((a, b) => a + b, 0);
 }
 
-const upKubernetes = ({options}: {options: PodOptions}) => async () => {
+const upKubernetes = ({ options }: { options: PodOptions }) => async () => {
   console.log('Preparing kubernetes resources');
 
   const available = await checkAvailability(options);
   if (available < options.num)
     return Promise.reject('Not enough resources');
 
-  const podsStatus = await getPodsStatus(options);
+  const podsStatus: string[] = await getPodsStatus(options);
   await Promise.all(
     podsStatus.map(async (status, i) => {
       const pod_i = pod(i, options);
@@ -212,7 +209,7 @@ const upKubernetes = ({options}: {options: PodOptions}) => async () => {
         if (status !== 'NotFound') {
           await exec`kubectl delete pod ${pod_name}`;
         }
-        if (status !== 'Pending' || status !== 'Waiting') {
+        if (status !== 'Pending' && status !== 'Waiting') {
           console.log(`Creating pod ${pod_name}`);
           const pod_script = new Response(JSON.stringify(pod_i));
           await exec`kubectl create -f - < ${pod_script}`;
@@ -238,20 +235,20 @@ const upKubernetes = ({options}: {options: PodOptions}) => async () => {
   );
 }
 
-const downKubernetes = ({options}: {options: PodOptions}) => async () => {
+const downKubernetes = ({ options }: { options: PodOptions }) => async () => {
   if (options.standby) {
     console.log('Standby mode, skipping cleanup');
     return;
   }
-    
+
   console.log('Cleaning up kubernetes resources');
   await Promise.all(
     Array.from({ length: options.num }, (_, i) => i + 1)
-    .map(async i => {
-      const name = podName(i, options);
-      console.log(`Deleting pod ${name}`);
-      await exec`kubectl delete pod ${name}`;
-    })
+      .map(async i => {
+        const name = podName(i, options);
+        console.log(`Deleting pod ${name}`);
+        await exec`kubectl delete pod ${name}`;
+      })
   );
 }
 
@@ -262,8 +259,8 @@ const useKubernetes = curryWrap(
 
 const restartKubernetes = async (options: PodOptions) => {
   console.log('Restarting kubernetes resources');
-  await downKubernetes({options: {...options, standby: true}})();
-  await upKubernetes({options})();
+  await downKubernetes({ options: { ...options, standby: true } })();
+  await upKubernetes({ options })();
 }
 
 export {

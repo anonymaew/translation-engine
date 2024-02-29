@@ -11,7 +11,6 @@ import {
   splitByParagraphs,
   splitBySentences,
   removeFootnotes,
-  clumpText
 } from './lib/doctext';
 
 const filename = 'chinese.docx';
@@ -21,7 +20,7 @@ const tar = 'English';
 const translatePod = {
   num: 1,
   name: 'translate',
-  image: 'ollama/ollama:0.1.22',
+  image: 'ollama/ollama:0.1.27',
   port: 11434,
   gpu: 'NVIDIA-A10',
   command: ['/bin/sh', '-c', 'nvidia-smi && ollama serve'],
@@ -47,7 +46,7 @@ const translateEntityOptions = {
 const translateMainOptions = {
   model: 'mistral:latest',
   options: {
-    temperature: 0, 
+    temperature: 0,
     // num_ctx: 4096,
   },
   prompt: `Ignore the ${tar} text. Please translate the given ${src} sentence into formal and academic ${tar} without any comment or discussion. Do not include any additional discussion or comment.`,
@@ -63,14 +62,15 @@ const rewriteOptions = {
 }
 
 const pipeline = curryCompose(
-  useKubernetes({options: translatePod}),
-  // useKubernetes(entityPod),
-  fileToMDString({filename}),
-  removeFootnotes(),
-  splitBySentences(),
-  // replaceTranslateNouns(translatePod, entityPod, translateEntityOptions, src),
-  translateText({pod: translatePod, llm: translateMainOptions}),
-  // rewriteText(translatePod, rewriteOptions),
-) 
+  useKubernetes({ options: translatePod }),
+  useKubernetes({ options: entityPod }),
+  fileToMDString({ filename }),
+  removeFootnotes({}),
+  // splitBySentences(),
+  splitByParagraphs({}),
+  replaceTranslateNouns({ translatePod, entityPod, translateEntityOptions, src }),
+  translateText({ pod: translatePod, llm: translateMainOptions }),
+  rewriteText({ pod: translatePod, llm: rewriteOptions }),
+)
 
-await pipeline();
+await pipeline({});

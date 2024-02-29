@@ -32,7 +32,7 @@ const isNothing = (text: string) => text === '' || text === '\n' || text === '\n
 const model_check = async (server: string, model: string) => {
   // get all local models
   const res = await fetch(`${server}/api/tags`);
-  const json: {models: {name: string}[]} = await res.json();
+  const json: { models: { name: string }[] } = await res.json();
   const exists = json.models.some(m => m.name === model);
   // if not exists, pull the model via api
   if (!exists) {
@@ -46,7 +46,6 @@ const model_check = async (server: string, model: string) => {
         }),
       }
     );
-    const ok = await response.text();
   }
 };
 
@@ -78,7 +77,7 @@ const chatJob = async (server: string, llm: LLMOptions, messages: Message[]) => 
       ok: false,
       statusText: `timeout on ${server}`,
     }), 1000 * 45))
-  ]);
+  ]) as Response;
 
   // tell the model to abort if timeout, otherwise we lose control
   if (!res.ok) {
@@ -86,7 +85,7 @@ const chatJob = async (server: string, llm: LLMOptions, messages: Message[]) => 
     return Promise.reject('LLM server just hung up, may need to restart the pod.');
   }
 
-  const json: {message:Message} = await res.json();
+  const json: { message: Message } = await res.json();
   const para = json.message.content.trim();
 
   return para;

@@ -1,7 +1,6 @@
 {
   "dependencies": { "bun": "^1.0.29" },
   "devDependencies": {
-    "@types/bun": "^1.0.7",
-    "typescript": "^5.3.3"
+    "@types/bun": "^1.0.7"
   }
 }

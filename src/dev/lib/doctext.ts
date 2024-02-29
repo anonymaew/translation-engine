@@ -6,7 +6,7 @@ const regex_footnote = /\[\^(\d+)\]:\s*(.*)/g;
 
 const supportedExtensions = ['md', 'docx', 'txt'];
 
-const convertToMD = ({filename}: {filename:string}) => async () => {
+const convertToMD = ({ filename }: { filename: string }) => async () => {
   const fileExt = filename.split('.').pop();
   if (fileExt !== undefined && !supportedExtensions.includes(fileExt))
     return Promise.reject(`Unsupported file type: ${fileExt}`);
@@ -21,7 +21,7 @@ const convertToMD = ({filename}: {filename:string}) => async () => {
   return res;
 }
 
-const mdToFile = ({filename}: {filename: string}) => async (md: string) => {
+const mdToFile = ({ filename }: { filename: string }) => async (md: string) => {
   const fileExt = filename.split('.').pop();
   const newFilename = `${filename.split('.').slice(0, -1)[0]}-translated.${fileExt}`
 
@@ -82,14 +82,14 @@ const removeFootnotes = curryTop(
 );
 
 const clumpParagraphs = (chars: number) => async (paragraphs: string[]) =>
-    paragraphs
-      .reduce((acc, p) => {
-        if (acc.length === 0)
-          return [p];
-        if ((acc[acc.length - 1].length + p.length) < chars)
-          return [...acc.slice(0, -1), acc[acc.length - 1] + '\n\n' + p];
-        return [...acc, p];
-      }, [] as string[])
+  paragraphs
+    .reduce((acc, p) => {
+      if (acc.length === 0)
+        return [p];
+      if ((acc[acc.length - 1].length + p.length) < chars)
+        return [...acc.slice(0, -1), acc[acc.length - 1] + '\n\n' + p];
+      return [...acc, p];
+    }, [] as string[])
 
 const unclumpParagraphs = () => async (clumped: string[]) =>
   clumped
