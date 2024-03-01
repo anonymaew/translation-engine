@@ -20,7 +20,7 @@ const tar = 'English';
 const translatePod = {
   num: 1,
   name: 'translate',
-  image: 'ollama/ollama:0.1.27',
+  image: 'ollama/ollama:0.1.22',
   port: 11434,
   gpu: 'NVIDIA-A10',
   command: ['/bin/sh', '-c', 'nvidia-smi && ollama serve'],
@@ -71,9 +71,9 @@ const pipeline = curryCompose(
   useKubernetes({ options: entityPod }),
   fileToMDString({ filename }),
   removeFootnotes({}),
-  // splitBySentences(),
-  splitByParagraphs({}),
-  replaceTranslateNouns({ translatePod, entityPod, translateEntityOptions, extractEntityOptions }),
+  splitBySentences({}),
+  // splitByParagraphs({}),
+  // replaceTranslateNouns({ translatePod, entityPod, translateEntityOptions, extractEntityOptions }),
   translateText({ pod: translatePod, llm: translateMainOptions }),
   rewriteText({ pod: translatePod, llm: rewriteOptions }),
 )

@@ -259,7 +259,7 @@ const useKubernetes = curryWrap(
 
 const restartKubernetes = async (options: PodOptions) => {
   console.log('Restarting kubernetes resources');
-  await downKubernetes({ options: { ...options, standby: true } })();
+  await downKubernetes({ options: { ...options, standby: false } })();
   await upKubernetes({ options })();
 }
 

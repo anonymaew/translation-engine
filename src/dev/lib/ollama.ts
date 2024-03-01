@@ -37,7 +37,7 @@ const model_check = async (server: string, model: string) => {
   // if not exists, pull the model via api
   if (!exists) {
     console.log(`model ${model} not found, pulling...`);
-    const response = await fetch(
+    const res = await fetch(
       `${server}/api/pull`,
       {
         method: 'POST',
@@ -46,6 +46,7 @@ const model_check = async (server: string, model: string) => {
         }),
       }
     );
+    await res.text();
   }
 };
 
@@ -124,7 +125,8 @@ const chatTask = async (pod: PodOptions, llm: LLMOptions, jobs: string[]) => {
     if (response === '')
       continue;
 
-    if (llm.validation && !llm.validation(text, response)) {
+    if (llm.validation !== undefined && !llm.validation(text, response)) {
+      console.log('Result validation failed, retrying...');
       i--;
       continue;
     }
