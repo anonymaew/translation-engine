@@ -136,7 +136,8 @@ const chatTask = async (pod: PodOptions, llm: LLMOptions, jobs: string[]) => {
       pastResult.push({ role: MessageRole.Assistant, content: response });
     }
     result.push(response);
-    console.log(`[User]----------------------------------------\n${text}\n[Assistant]----------------------------------------\n${response}`);
+    // yellow text for user, green for assistant
+    console.log(`[User]----------------------------------------\n\033[33m${text}\033[0m\n[Assistant]----------------------------------------\n\033[32m${response}\033[0m\n`);
   }
   return result;
 };
