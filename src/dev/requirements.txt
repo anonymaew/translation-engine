@@ -1,0 +1,4 @@
+kr8s==0.14.1
+more-itertools==10.2.0
+requests==2.31.0
+requests-oauthlib==2.0.0
