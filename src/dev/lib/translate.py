@@ -1,8 +1,9 @@
 from .curry import curry_top
 from .ollama import chat_task
-from .kube import web_name, pod_obj
-import requests
+from .kube import pod_obj
 import more_itertools
+import requests
+from time import sleep
 
 
 noun_supported_langs = [
@@ -49,7 +50,7 @@ def extract_nouns(server, text, options):
 
     print(f'Extracting {options['src']} entities...')
     res = requests.post(
-        f'{server}/api/extract',
+        f'{server}',
         json={
             'text': text,
             'lang': the_lang[0]['model'],
@@ -64,13 +65,13 @@ def extract_nouns(server, text, options):
 
 def bullets_to_list(text):
     lines = text.split('\n')
-    bullet_lines = filter(lambda x: x.strip()[0] == '-', lines)
+    bullet_lines = filter(lambda x: x.strip()[:1] == '-', lines)
     points = list(map(lambda x: x.strip()[2:], bullet_lines))
     return points
 
 
 def dont_lost_items(text1, text2):
-    return bullets_to_list(text1).length() == bullets_to_list(text2).length()
+    return len(bullets_to_list(text1)) == len(bullets_to_list(text2))
 
 
 def translate_nouns(translate_pod, translate_entity_options, nouns):
@@ -79,7 +80,7 @@ def translate_nouns(translate_pod, translate_entity_options, nouns):
     clumps_str = list(map(lambda c: '\n'.join(
         list(map(lambda w: f'- {w}', c))), clumps))
 
-    llm = translate_entity_options + {'validation': dont_lost_items}
+    llm = dict(translate_entity_options, **{'validation': dont_lost_items})
     translated_chunks = chat_task(pod_obj(translate_pod), llm, clumps_str)
     translated = ('\n'.join(translated_chunks)).split('\n')
     translated_words = list(map(lambda x: x.strip()[2:], translated))
@@ -90,8 +91,12 @@ def replace_nouns(config):
     def f(texts):
         translate_pod, entity_pod, translate_entity_options, extract_entity_options = config
         text = '\n'.join(texts)
-        entity_server = f'https://{web_name(entity_pod)}'
+        port_forward = pod_obj(entity_pod).portforward(remote_port=5000)
+        port_forward.start()
+        sleep(1)
+        entity_server = f'http://localhost:{port_forward.local_port}'
         nouns = extract_nouns(entity_server, text, extract_entity_options)
+        port_forward.stop()
         translted_nouns = translate_nouns(translate_pod,
                                           translate_entity_options,
                                           nouns)

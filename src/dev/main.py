@@ -1,10 +1,10 @@
 from lib.kube import use_kubernetes
 from lib.curry import curry_compose
 from lib.translate import replace_translate_nouns, translate_text
-from lib.doctext import file_to_md_string, remove_footnotes, split_by_paragraphs
+from lib.doctext import file_to_md_string, remove_footnotes, split_by_paragraphs, split_by_sentences
 
-filename = 'Giustizia come vero apriori del tempo.docx'
-src = 'Italian'
+filename = '戴震天算学中国化的意义.docx'
+src = 'Chinese'
 tar = 'English'
 
 translate_pod = {
@@ -22,7 +22,7 @@ entity_pod = {
 }
 
 translate_entity_options = {
-    'model': 'mistral:latest',
+    'model': 'llama3:latest',
     'options': {
         'temperature': 0.4,
     },
@@ -54,7 +54,7 @@ pipeline = curry_compose([
     use_kubernetes(entity_pod),
     file_to_md_string(filename),
     remove_footnotes(None),
-    split_by_paragraphs(None),
+    split_by_sentences(None),
     replace_translate_nouns(
         translate_pod,
         entity_pod,

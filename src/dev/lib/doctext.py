@@ -1,4 +1,5 @@
 from .curry import curry_wrap, curry_top
+import more_itertools
 import subprocess
 import re
 
@@ -6,6 +7,10 @@ regex_footnotemark = r'\[\^(\d+)\]'
 regex_footnote = r'\[\^(\d+)\]:\s*(.*)'
 
 supported_extensions = ['md', 'docx', 'txt', 'pdf']
+
+
+def is_nothing(text):
+    return text == '' or text == '\n' or text == '\n\n' or text == '.'
 
 
 def convert_to_md(config):
@@ -64,8 +69,11 @@ def string_to_sentences(_):
         fix_dots = md.replace('。', '. ')
         paragraphs = fix_dots.split('\n\n')
         sentences = list(map(lambda p: p.split('. '), paragraphs))
-        sentences_dot = list(map(lambda s: s + '.', sentences))
-        sentences_str = '\n'.join(sentences_dot)
+        sentences_clean = list(
+            map(lambda p: list(filter(lambda s: not is_nothing(s), p)), sentences))
+        sentences_dot = list(
+            map(lambda p: list(map(lambda s: s + '.', p)) + [''], sentences_clean))
+        sentences_str = list(more_itertools.collapse(sentences_dot))
         return sentences_str
     return f
 

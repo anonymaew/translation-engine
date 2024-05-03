@@ -1,10 +1,7 @@
 from .kube import restart_kubernetes
 import requests
 from time import sleep
-
-
-def is_nothing(text):
-    return text == '' or text == '\n' or text == '\n\n'
+from .doctext import is_nothing
 
 
 # checking whether the machine has the model
@@ -12,6 +9,7 @@ def model_check(pod, model):
     try:
         pod.exec(['ollama', 'show', model])
     except Exception:
+        print(f'Model {model} not found, pulling...')
         pod.exec(['ollama', 'pull', model])
 
 
@@ -46,13 +44,15 @@ def chat_task(pod, llm, jobs):
         job = jobs[i]
         if is_nothing(job):
             result.append('')
+            i += 1
+            continue
         messages = [
             {'role': 'system', 'content': llm['prompt']},
             {'role': 'user', 'content': job}
         ]
         try:
             res = chat_job(server, llm, messages)
-            if 'validation' in llm and llm['validation'](res) is False:
+            if 'validation' in llm and llm['validation'](job, res) is False:
                 print('Result validation failed, retrying...')
                 i -= 1
                 continue
