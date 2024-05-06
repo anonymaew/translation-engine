@@ -2,6 +2,7 @@ from .curry import curry_wrap, curry_top
 import more_itertools
 import subprocess
 import re
+import fitz
 
 regex_footnotemark = r'\[\^(\d+)\]'
 regex_footnote = r'\[\^(\d+)\]:\s*(.*)'
@@ -13,37 +14,55 @@ def is_nothing(text):
     return text == '' or text == '\n' or text == '\n\n' or text == '.'
 
 
-def convert_to_md(config):
-    def f(_):
-        filename = config[0]
-        file_ext = filename.split('.')[-1]
-        if file_ext not in supported_extensions:
-            raise ValueError(f'File extension not supported: {file_ext}')
+class Document():
+    def __init__(self, filename):
+        self.filename = filename
+        self.file_ext = filename.split('.')[-1]
+        if self.file_ext not in supported_extensions:
+            raise ValueError(f'File extension not supported: {self.file_ext}')
 
         subprocess.run(['rm', '-rf', 'temp'])
 
         print(f'Converting {filename} to markdown...')
-        res = subprocess.run(['pandoc', '-t', 'markdown', '--wrap=none',
-                             '--extract-media', 'temp', filename], stdout=subprocess.PIPE).stdout.decode('utf-8')
-        return res
-    return f
+        res = ''
+        if self.file_ext == 'pdf':
+            doc = fitz.open(filename)
+            for page in doc:
+                res += page.get_text('text') + '\n\n'
+        else:
+            res = subprocess.run(['pandoc', '-t', 'markdown', '--wrap=none',
+                                  '--extract-media', 'temp', filename],
+                                 stdout=subprocess.PIPE).stdout.decode('utf-8')
+        self.md = res
+        self.split_options = None
 
+    def split(self, split_options='sentences'):
+        self.split_options = split_options
+        if self.split_options == 'sentences':
+            return string_to_sentences(None)(self.md)
+        elif self.split_options == 'paragraphs':
+            return string_to_paragraphs(None)(self.md)
+        else:
+            raise ValueError(
+                f'Invalid split option: {self.split_options}')
 
-def md_to_file(config):
-    def f(md):
-        filename = config[0]
-        file_ext = filename.split('.')[-1]
-        new_filename = filename.replace(
-            f'.{file_ext}', f'-translated.{file_ext}')
+    def export(self, jobs):
+        if self.split_options == 'sentences':
+            self.md = sentences_to_string(None)(jobs)
+        elif self.split_options == 'paragraphs':
+            self.md = paragraphs_to_string(None)(jobs)
+        else:
+            raise ValueError(
+                f'Invalid split option: {self.split_options}')
+
+        new_filename = self.filename.replace(
+            f'.{self.file_ext}', f'-translated.{self.file_ext}')
+
         print(f'Converting back to {new_filename}...')
         subprocess.run(['pandoc', '-o', new_filename, '-t',
-                       file_ext, '-f', 'markdown'], input=md.encode('utf-8'))
+                       self.file_ext, '-f', 'markdown'], input=self.md.encode('utf-8'))
 
         subprocess.run(['rm', '-rf', 'temp'])
-    return f
-
-
-file_to_md_string = curry_wrap(convert_to_md, md_to_file)
 
 
 def string_to_paragraphs(_):

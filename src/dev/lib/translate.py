@@ -1,5 +1,4 @@
 from .curry import curry_top
-from .ollama import chat_task
 from .kube import pod_obj
 import more_itertools
 import requests
@@ -107,5 +106,4 @@ def replace_nouns(config):
     return f
 
 
-replace_translate_nouns = curry_top(replace_nouns)
 replace_translate_nouns = curry_top(replace_nouns)

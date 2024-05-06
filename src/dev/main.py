@@ -1,7 +1,8 @@
 from lib.kube import use_kubernetes
 from lib.curry import curry_compose
 from lib.translate import replace_translate_nouns, translate_text
-from lib.doctext import file_to_md_string, remove_footnotes, split_by_paragraphs, split_by_sentences
+from lib.chatagent import OllamaAgent, OpenAIAgent
+from lib.doctext import Document
 
 filename = '戴震天算学中国化的意义.docx'
 src = 'Chinese'
@@ -39,7 +40,7 @@ translate_main_options = {
         'temperature': 0,
         # num_ctx: 4096,
     },
-    'prompt': f'Ignore the {tar} text. Please translate the given {src} sentence into formal and academic {tar} without any comment or discussion. Do not include any additional discussion or comment.',
+    'prompt': f'Ignore the {tar} text. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Refrain from explaning what you are doing. Do not self-reference. You are an expert translator tasked with improving a text\'s spelling, grammarical, literary quality. Please rewrite the translated text using a succinct, clear, and formal tone of voice and academic writing style from the perspective of a history professor. The text to be translated is a history book. Please do not give any alternative translation or including any comments or discussion.',
 }
 rewrite_options = {
     'model': 'mistral:latest',
@@ -49,23 +50,10 @@ rewrite_options = {
     'prompt': f'Rewrite the following sentence into formal and academic {tar}. do not include any additional discussion or comment.',
 }
 
-pipeline = curry_compose([
-    use_kubernetes(translate_pod),
-    use_kubernetes(entity_pod),
-    file_to_md_string(filename),
-    remove_footnotes(None),
-    split_by_sentences(None),
-    replace_translate_nouns(
-        translate_pod,
-        entity_pod,
-        translate_entity_options,
-        extract_entity_options,
-    ),
-    translate_text(
-        translate_pod,
-        translate_main_options,
-    ),
-])
-
 if __name__ == '__main__':
-    pipeline(None)
+    agent = OllamaAgent(translate_pod, translate_main_options)
+    # agent = OpenAIAgent(translate_main_options)
+    file = Document(filename)
+    jobs = file.split('sentences')
+    translated = agent.task(jobs)
+    file.export(translated)

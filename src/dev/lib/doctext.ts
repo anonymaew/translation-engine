@@ -4,7 +4,7 @@ import { curryWrap, curryTop } from './curry';
 const regex_footnotemark = /\[\^(\d+)\]/g;
 const regex_footnote = /\[\^(\d+)\]:\s*(.*)/g;
 
-const supportedExtensions = ['md', 'docx', 'txt', 'pdf'];
+const supportedExtensions = ['md', 'docx', 'txt'];
 
 const convertToMD = ({ filename }: { filename: string }) => async () => {
   const fileExt = filename.split('.').pop();
