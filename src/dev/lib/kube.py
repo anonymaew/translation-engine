@@ -6,15 +6,15 @@ from time import sleep
 
 
 def pod_name(options):
-    return f'{options['name']}-pod'
+    return f'{options["name"]}-pod'
 
 
 def service_name(options):
-    return f'{options['name']}'
+    return f'{options["name"]}'
 
 
 def web_name(options):
-    return f'{options['name']}-dcct.nrp-nautilus.io'
+    return f'{options["name"]}-dcct.nrp-nautilus.io'
 
 
 def pod_obj(options):
