@@ -43,11 +43,10 @@ def extract_nouns(server, text, options):
     the_lang = [lang for lang in noun_supported_langs if lang['lang']
                 == options['src']] or None
     if the_lang is None:
-        print(f'Language {
-              options['src']} is not supported, skip entity extraction...')
+        print(f'{options["src"]} not supported, skip entity extraction')
         return []
 
-    print(f'Extracting {options['src']} entities...')
+    print(f'Extracting {options["src"]} entities...')
     res = requests.post(
         f'{server}',
         json={
