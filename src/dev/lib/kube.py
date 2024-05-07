@@ -1,32 +1,104 @@
-from .curry import curry_wrap
-from kr8s.objects import Pod
 import requests
 from uuid import uuid4
 from time import sleep
+import json
+import subprocess
+import os
 
 
-def pod_name(options):
-    return f'{options["name"]}-pod'
+class Pod:
+    def __init__(self, options):
+        self.options = options
+        self.name = f'{options["name"]}-pod'
+        self.json = pod_json(options, self.name)
+
+    def status(self):
+        res = subprocess.run(['kubectl', 'get', 'pod', self.name,
+                              '--template={{printf "%s" .status.phase}}'],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL).stdout.decode('utf-8').strip()
+        return None if res == '' else res
+
+    def check_spec(self):
+        response = requests.post(
+            'https://portal.nrp-nautilus.io/rpc',
+            json={
+                'jsonrpc': '2.0',
+                'method': 'guest.ListNodeInfo',
+                'params': {},
+                'id': str(uuid4()),
+            },
+        )
+        json = response.json()
+        if 'error' in json:
+            raise Exception(json['error']['message'])
+            gpu_needs = list(filter(
+                lambda n: 'gpu' not in self.options or n['GPUType'] == self.options['gpu'],
+                json['result']['Nodes']))
+            # print(list(map(lambda n: n['Taints'], gpu_needs)))
+            # no_taint_nodes = list(filter(
+            #     lambda n: n['Taints'] is None or n['Taints'] == [], gpu_needs))
+            gpus = list(map(lambda n: int(n['GPUAvailable']), gpu_needs))
+            return sum(gpus)
+
+    def up(self):
+        print('Preparing kubernetes resources')
+        available = self.check_spec()
+        if available == 0:
+            raise Exception(f'Not enough resources: {self.options["gpu"]}')
+
+        status = self.status()
+        if status != 'Running':
+            if status in ['Completed', 'Failed', 'Error']:
+                subprocess.run(['kubectl', 'delete', 'pod',
+                                self.name])
+                while self.status() is not None:
+                    sleep(1)
+            if status not in ['Pending', 'ContainerCreating', 'Waiting']:
+                print(f'Creating {self.name}')
+                subprocess.run(['kubectl', 'create', '-f', '-'],
+                               input=self.json, text=True)
+
+            print(f'Waiting for {self.name} to be ready')
+            while self.status() != 'Running':
+                sleep(1)
+
+        print(f'Pod ready: {self.name}')
+
+    def exec_code(self, *command):
+        res = subprocess.run(['kubectl', 'exec', self.name, '--', *command],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        return res.returncode
+
+    def port_forward(self, port):
+        print(f'Port forwarding {port} to {self.name}')
+        id = os.fork()
+        if id == 0:
+            res = subprocess.run(['kubectl', 'port-forward', f'pod/{self.name}',
+                                  f'{port}'], stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+        else:
+            sleep(1)
+            os.kill(id, 9)
+
+    def down(self):
+        if self.status() is not None and not self.options['standby']:
+            print(f'Deleting {self.name}')
+            subprocess.run(['kubectl', 'delete', 'pod',
+                            self.name])
+            while self.status() is not None:
+                sleep(1)
 
 
-def service_name(options):
-    return f'{options["name"]}'
-
-
-def web_name(options):
-    return f'{options["name"]}-dcct.nrp-nautilus.io'
-
-
-def pod_obj(options):
-    name = pod_name(options)
-    return Pod({
+def pod_json(options, name):
+    return json.dumps({
         'apiVersion': 'v1',
         'kind': 'Pod',
         'metadata': {
             'name': name,
-            'labels': {
-                'k8s-app': name,
-            },
+                'labels': {
+                    'k8s-app': name,
+                },
         },
         'spec': {
             'containers': [
@@ -78,71 +150,9 @@ def pod_obj(options):
     })
 
 
-def rand_uuid():
-    return str(uuid4())
-
-
-def check_availability(options):
-    response = requests.post(
-        'https://portal.nrp-nautilus.io/rpc',
-        json={
-            'jsonrpc': '2.0',
-            'method': 'guest.ListNodeInfo',
-            'params': {},
-            'id': rand_uuid(),
-        },
-    )
-    json = response.json()
-    if 'error' in json:
-        raise Exception(json['error']['message'])
-
-    gpu_needs = list(filter(
-        lambda n: 'gpu' not in options or n['GPUType'] == options['gpu'], json['result']['Nodes']))
-    no_taint_nodes = list(filter(
-        lambda n: n['Taints'] is None or n['Taints'] == [], gpu_needs))
-    gpus = list(map(lambda n: int(n['GPUAvailable']), no_taint_nodes))
-    return sum(gpus)
-
-
-def up_kubernetes(config):
-    def f(_):
-        options = config[0]
-        print('Preparing kubernetes resources')
-        # available = check_availability(options)
-        # if available == 0:
-        #     raise Exception('Not enough resources')
-
-        pod = pod_obj(options)
-        exists = pod.exists()
-
-        if exists:
-            pod.patch(options)
-        else:
-            pod.create()
-        pod.wait('condition=Ready')
-
-        if not exists:
-            print('Cold start, waiting for 10 seconds')
-            sleep(10)
-
-        print(f'Pod ready: {pod_name}')
-    return f
-
-
-def down_kubernetes(config):
-    def f(_):
-        options = config[0]
-        pod = pod_obj(options)
-        if pod.exists() and not options['standby']:
-            pod.delete()
-            pod.wait('deletion')
-    return f
-
-
-use_kubernetes = curry_wrap(up_kubernetes, down_kubernetes)
-
-
-def restart_kubernetes(options):
-    print('Restarting kubernetes resources')
-    down_kubernetes(options)()
-    up_kubernetes(options)()
+if __name__ == '__main__':
+    res = subprocess.run(['kubectl', 'port-forward', f'pod/translate-pod',
+                          '11434'],
+                         stderr=subprocess.DEVNULL)
+    print('done')
+    sleep(100)

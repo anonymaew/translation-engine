@@ -1,6 +1,4 @@
-from lib.kube import use_kubernetes
-from lib.curry import curry_compose
-from lib.translate import replace_translate_nouns, translate_text
+# from lib.translate import replace_translate_nouns
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
 

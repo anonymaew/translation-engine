@@ -1,8 +1,7 @@
-from .curry import curry_wrap, curry_top
+import fitz
 import more_itertools
 import subprocess
 import re
-import fitz
 
 regex_footnotemark = r'\[\^(\d+)\]'
 regex_footnote = r'\[\^(\d+)\]:\s*(.*)'
@@ -39,18 +38,18 @@ class Document():
     def split(self, split_options='sentences'):
         self.split_options = split_options
         if self.split_options == 'sentences':
-            return string_to_sentences(None)(self.md)
+            return string_to_sentences(self.md)
         elif self.split_options == 'paragraphs':
-            return string_to_paragraphs(None)(self.md)
+            return string_to_paragraphs(self.md)
         else:
             raise ValueError(
                 f'Invalid split option: {self.split_options}')
 
     def export(self, jobs):
         if self.split_options == 'sentences':
-            self.md = sentences_to_string(None)(jobs)
+            self.md = sentences_to_string(jobs)
         elif self.split_options == 'paragraphs':
-            self.md = paragraphs_to_string(None)(jobs)
+            self.md = paragraphs_to_string(jobs)
         else:
             raise ValueError(
                 f'Invalid split option: {self.split_options}')
@@ -65,43 +64,31 @@ class Document():
         subprocess.run(['rm', '-rf', 'temp'])
 
 
-def string_to_paragraphs(_):
-    def f(md):
-        paragraphs = md.split('\n\n')
-        paragraphs_clean = list(
-            map(lambda p: ' '.join(p.split('\n')), paragraphs))
-        return paragraphs_clean
-    return f
+def string_to_paragraphs(md):
+    paragraphs = md.split('\n\n')
+    paragraphs_clean = list(
+        map(lambda p: ' '.join(p.split('\n')), paragraphs))
+    return paragraphs_clean
 
 
-def paragraphs_to_string(_):
-    def f(paragraphs):
-        return '\n\n'.join(paragraphs)
-    return f
+def paragraphs_to_string(paragraphs):
+    return '\n\n'.join(paragraphs)
 
 
-split_by_paragraphs = curry_wrap(string_to_paragraphs, paragraphs_to_string)
+def string_to_sentences(md):
+    fix_dots = md.replace('。', '. ')
+    paragraphs = fix_dots.split('\n\n')
+    sentences = list(map(lambda p: p.split('. '), paragraphs))
+    sentences_clean = list(
+        map(lambda p: list(filter(lambda s: not is_nothing(s), p)), sentences))
+    sentences_dot = list(
+        map(lambda p: list(map(lambda s: s + '.', p)) + [''], sentences_clean))
+    sentences_str = list(more_itertools.collapse(sentences_dot))
+    return sentences_str
 
 
-def string_to_sentences(_):
-    def f(md):
-        fix_dots = md.replace('。', '. ')
-        paragraphs = fix_dots.split('\n\n')
-        sentences = list(map(lambda p: p.split('. '), paragraphs))
-        sentences_clean = list(
-            map(lambda p: list(filter(lambda s: not is_nothing(s), p)), sentences))
-        sentences_dot = list(
-            map(lambda p: list(map(lambda s: s + '.', p)) + [''], sentences_clean))
-        sentences_str = list(more_itertools.collapse(sentences_dot))
-        return sentences_str
-    return f
-
-
-def sentences_to_string(_): return lambda sentences: \
-    '\n'.join(sentences)
-
-
-split_by_sentences = curry_wrap(string_to_sentences, sentences_to_string)
+def sentences_to_string(sentences):
+    return '\n'.join(sentences)
 
 
 def remove_footnotes_func(_):
@@ -114,6 +101,3 @@ def remove_footnotes_func(_):
         str_no_footnotes = '\n\n'.join(paragraphs_no_footnotes)
         return str_no_footnotes
     return f
-
-
-remove_footnotes = curry_top(remove_footnotes_func)

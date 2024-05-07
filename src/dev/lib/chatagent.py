@@ -1,20 +1,20 @@
-from .kube import restart_kubernetes, pod_obj
-import openai
-import requests
-from time import sleep
+from .kube import Pod
 from .doctext import is_nothing
 from dotenv import load_dotenv
 import os
+import openai
 from openai import OpenAI
+import requests
+from time import sleep
 
 
 # checking whether the machine has the model
 def model_check(pod, model):
     try:
-        pod.exec(['ollama', 'show', model])
+        assert pod.exec_code('ollama', 'show', model, '--license') == 0
     except Exception:
         print(f'Model {model} not found, pulling...')
-        pod.exec(['ollama', 'pull', model])
+        pod.exec_code('ollama', 'pull', model)
 
 
 def chat_job(server, llm, messages):
@@ -79,8 +79,6 @@ class ChatAgent:
                 self.error_handler(e)
                 i -= 1
                 continue
-                i -= 1
-                continue
             finally:
                 i += 1
         self.cleanup()
@@ -95,32 +93,19 @@ class ChatAgent:
 
 class OllamaAgent(ChatAgent):
     def __init__(self, pod_options, llm_options):
-        self.pod = pod_obj(pod_options)
+        self.pod = Pod(pod_options)
         self.pod_options = pod_options
-        self.port_forwarding = None
         super().__init__(llm_options)
         self.start()
         self.server = None
 
     def start(self):
-        exists = self.pod.exists()
-        if exists:
-            self.pod.patch(self.pod_options)
-        else:
-            self.pod.create()
-        self.pod.wait('condition=Ready')
-        if not exists:
-            print('Cold start, waiting for 5 seconds')
-            sleep(5)
-        print(f'Pod ready: {self.pod_options["name"]}')
+        self.pod.up()
 
     def prepare(self):
         model_check(self.pod, self.llm['model'])
-        self.port_forwarding = self.pod.portforward(remote_port=11434)
-        self.port_forwarding.start()
-        sleep(1)
-        self.server = f'http://localhost:{self.port_forwarding.local_port}'
-        print(f'Port forwarding ready: {self.server}')
+        self.pod.port_forward(11434)
+        self.server = 'http://localhost:11434'
 
     def error_handler(self, e):
         if e == requests.exceptions.Timeout:
@@ -148,10 +133,11 @@ class OllamaAgent(ChatAgent):
             return requests.exceptions.Timeout
 
     def cleanup(self):
-        self.port_forwarding.stop()
+        # self.port_forwarding.stop()
         if not self.pod_options['standby']:
             self.pod.delete()
-            self.pod.wait('deletion')
+            while self.pod.status() is not None:
+                sleep(1)
 
 
 class OpenAIAgent(ChatAgent):

@@ -1,5 +1,5 @@
 from .curry import curry_top
-from .kube import pod_obj
+# from .kube import pod_obj
 import more_itertools
 import requests
 from time import sleep
@@ -31,12 +31,6 @@ noun_supported_langs = [
     {'lang': 'Swedish', 'code': 'sv', 'model': 'sv_core_news_sm'},
     {'lang': 'Ukrainian', 'code': 'uk', 'model': 'uk_core_news_sm'},
 ]
-
-
-translate_text = curry_top(
-    lambda config: lambda texts: chat_task(
-        pod_obj(config[0]), config[1], texts)
-)
 
 
 def extract_nouns(server, text, options):
