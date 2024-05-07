@@ -1,4 +1,6 @@
-kr8s==0.14.1
-more-itertools==10.2.0
-requests==2.31.0
-requests-oauthlib==2.0.0
+curry==0.2
+fitz==0.0.1.dev2
+more_itertools==10.2.0
+openai==1.26.0
+python-dotenv==1.0.1
+Requests==2.31.0

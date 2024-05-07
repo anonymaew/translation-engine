@@ -8,11 +8,11 @@ cluster.
 
 - Manipulating document files and dissecting texts locally on the machine.
 - Spin up Kubernetes pods by itself according to the job.
-- Translation is sent to the pods to be processed.
+- Translation is sent to the pods to be processed using configured prompts.
 
 ## Prerequisites
 
-1. [Bun.js](https://bun.sh/): for running JavaScript
+1. [Python3](https://www.python.org/downloads/): Python (preferably 3.11+)
 2. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/):
    Kubernetes cluster manager
 3. Access to a Kubernetes cluster, preferably with [NRP Nautilus cluster](https://portal.nrp-nautilus.io/).
@@ -21,7 +21,7 @@ cluster.
 ## Running the program
 
 1. Put the document to be translated in this directory.
-2. Adjusting parameters in `main.ts` file accordingly.
-3. Run the program using `bun main.ts`.
+2. Adjusting parameters in `main.py` file accordingly.
+3. Run the program using `python main.py` or `python3 main.py`.
 4. If success, the translated document will be in the same directory with the
    suffix `-translated`.
