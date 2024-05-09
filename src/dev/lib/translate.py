@@ -1,5 +1,4 @@
 from .curry import curry_top
-# from .kube import pod_obj
 import more_itertools
 import requests
 from time import sleep

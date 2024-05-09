@@ -17,24 +17,6 @@ def model_check(pod, model):
         pod.exec_code('ollama', 'pull', model)
 
 
-def chat_job(server, llm, messages):
-    body = {
-        'messages': messages,
-        'options': llm['options'],
-        'model': llm['model'],
-        'stream': False
-    }
-    try:
-        res = requests.post(
-            f'{server}/api/chat',
-            json=body,
-            timeout=45
-        )
-        return res.json()['message']['content'].strip()
-    except requests.exceptions.Timeout:
-        return requests.exceptions.Timeout
-
-
 class ChatAgent:
     def __init__(self, llm):
         self.llm = llm
@@ -130,7 +112,7 @@ class OllamaAgent(ChatAgent):
             )
             return res.json()['message']['content'].strip()
         except requests.exceptions.Timeout:
-            return requests.exceptions.Timeout
+            raise requests.exceptions.Timeout
 
     def cleanup(self):
         # self.port_forwarding.stop()

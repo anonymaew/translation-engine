@@ -8,7 +8,7 @@ tar = 'English'
 
 translate_pod = {
     'name': 'translate',
-    'image': 'ollama/ollama:0.1.22',
+    'image': 'ollama/ollama:0.1.34',
     'gpu': 'NVIDIA-A10',
     'command': ['/bin/sh', '-c', 'nvidia-smi && ollama serve'],
     'standby': True,
@@ -33,7 +33,7 @@ extract_entity_options = {
     'label': ['PERSON', 'NORP', 'WORK_OF_ART'],
 }
 translate_main_options = {
-    'model': 'llama3:latest',
+    'model': 'gemma:latest',
     'options': {
         'temperature': 0,
         # num_ctx: 4096,

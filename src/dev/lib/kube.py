@@ -71,14 +71,23 @@ class Pod:
         return res.returncode
 
     def port_forward(self, port):
-        print(f'Port forwarding {port} to {self.name}')
         id = os.fork()
         if id == 0:
             res = subprocess.run(['kubectl', 'port-forward', f'pod/{self.name}',
                                   f'{port}'], stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL)
         else:
-            sleep(1)
+            # while requests.get(f'http://localhost:{port}').status_code != 200:
+            while True:
+                try:
+                    requests.get(f'http://localhost:{port}')
+                    break
+                except requests.exceptions.ConnectionError:
+                    sleep(1)
+                except requests.exceptions.Timeout:
+                    print('Timeout')
+                    pass
+            print(f'Server accessible at http://localhost:{port}')
             os.kill(id, 9)
 
     def down(self):
@@ -113,6 +122,10 @@ def pod_json(options, name):
                             'nvidia.com/gpu': '1',
                         },
                     },
+                    # 'volumeMounts': [{
+                    #     'mountPath': '/usr/share/ollama',
+                    #     'name': 'data',
+                    # }],
                     'env': [
                         {
                             'name': 'PATH',
@@ -125,10 +138,16 @@ def pod_json(options, name):
                         {
                             'name': 'NVIDIA_DRIVER_CAPABILITIES',
                             'value': 'compute,utility'
-                        }
+                        },
                     ],
                 },
             ],
+            # 'volumes': [{
+            #     'name': 'data',
+            #     'persistentVolumeClaim': {
+            #         'claimName': 'ollama-models'
+            #     }
+            # }],
             'affinity': {
                 'nodeAffinity': {
                     'requiredDuringSchedulingIgnoredDuringExecution': {
