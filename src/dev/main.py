@@ -1,6 +1,7 @@
 # from lib.translate import replace_translate_nouns
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
+from lib.translate import EntityAgent
 
 filename = '戴震天算学中国化的意义.docx'
 src = 'Chinese'
@@ -25,7 +26,7 @@ translate_entity_options = {
     'options': {
         'temperature': 0.4,
     },
-    'prompt': f'Translate the following list of {src} entities into short {tar}.',
+    'prompt': f'Translate the following list of {src} entities into short {tar}, present in dash bullet points and do not include the original {src} language.',
 }
 extract_entity_options = {
     'src': src,
@@ -33,7 +34,7 @@ extract_entity_options = {
     'label': ['PERSON', 'NORP', 'WORK_OF_ART'],
 }
 translate_main_options = {
-    'model': 'gemma:latest',
+    'model': 'llama3:latest',
     'options': {
         'temperature': 0,
         # num_ctx: 4096,
@@ -49,9 +50,11 @@ rewrite_options = {
 }
 
 if __name__ == '__main__':
-    agent = OllamaAgent(translate_pod, translate_main_options)
+    agent = OllamaAgent(translate_pod)
+    entity = EntityAgent(agent, entity_pod, extract_entity_options)
     # agent = OpenAIAgent(translate_main_options)
     file = Document(filename)
+    file.md = entity.task(str(file), translate_entity_options)
     jobs = file.split('sentences')
-    translated = agent.task(jobs)
+    translated = agent.task(jobs, translate_main_options)
     file.export(translated)

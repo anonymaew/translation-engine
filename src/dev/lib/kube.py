@@ -29,23 +29,24 @@ class Pod:
                 'id': str(uuid4()),
             },
         )
+        print(response)
         json = response.json()
         if 'error' in json:
             raise Exception(json['error']['message'])
-            gpu_needs = list(filter(
-                lambda n: 'gpu' not in self.options or n['GPUType'] == self.options['gpu'],
-                json['result']['Nodes']))
-            # print(list(map(lambda n: n['Taints'], gpu_needs)))
-            # no_taint_nodes = list(filter(
-            #     lambda n: n['Taints'] is None or n['Taints'] == [], gpu_needs))
-            gpus = list(map(lambda n: int(n['GPUAvailable']), gpu_needs))
-            return sum(gpus)
+        gpu_needs = list(filter(
+            lambda n: 'gpu' not in self.options or n['GPUType'] == self.options['gpu'],
+            json['result']['Nodes']))
+        # print(list(map(lambda n: n['Taints'], gpu_needs)))
+        # no_taint_nodes = list(filter(
+        #     lambda n: n['Taints'] is None or n['Taints'] == [], gpu_needs))
+        gpus = list(map(lambda n: int(n['GPUAvailable']), gpu_needs))
+        return sum(gpus)
 
     def up(self):
         print('Preparing kubernetes resources')
-        available = self.check_spec()
-        if available == 0:
-            raise Exception(f'Not enough resources: {self.options["gpu"]}')
+        # available = self.check_spec()
+        # if available == 0:
+        #     raise Exception(f'Not enough resources: {self.options["gpu"]}')
 
         status = self.status()
         if status != 'Running':
@@ -167,11 +168,3 @@ def pod_json(options, name):
             } if 'gpu' in options else {},
         },
     })
-
-
-if __name__ == '__main__':
-    res = subprocess.run(['kubectl', 'port-forward', f'pod/translate-pod',
-                          '11434'],
-                         stderr=subprocess.DEVNULL)
-    print('done')
-    sleep(100)

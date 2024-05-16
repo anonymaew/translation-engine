@@ -18,23 +18,19 @@ def model_check(pod, model):
 
 
 class ChatAgent:
-    def __init__(self, llm):
-        self.llm = llm
+    def __init__(self):
+        pass
 
     def start(self):
         pass
 
-    def prepare(self):
-        pass
-
-    def job(self, messages):
+    def job(self, messages, llm):
         pass
 
     def error_handler(self, e):
         raise e
 
-    def task(self, jobs):
-        self.prepare()
+    def task(self, jobs, llm):
         i, result = 0, []
         while i < len(jobs):
             job = jobs[i]
@@ -43,12 +39,13 @@ class ChatAgent:
                 i += 1
                 continue
             messages = [
-                {'role': 'system', 'content': self.llm['prompt']},
+                {'role': 'system', 'content': llm['prompt']},
                 {'role': 'user', 'content': job}
             ]
             try:
-                res = self.job(messages)
-                if 'validation' in self.llm and self.llm['validation'](job, res) is False:
+                res = self.job(messages, llm)
+                if 'validation' in llm and llm['validation'](job, res) is False:
+                    # print(res)
                     print('Result validation failed, retrying...')
                     i -= 1
                     continue
@@ -74,18 +71,18 @@ class ChatAgent:
 
 
 class OllamaAgent(ChatAgent):
-    def __init__(self, pod_options, llm_options):
+    def __init__(self, pod_options):
         self.pod = Pod(pod_options)
         self.pod_options = pod_options
-        super().__init__(llm_options)
+        super().__init__()
         self.start()
         self.server = None
 
     def start(self):
         self.pod.up()
 
-    def prepare(self):
-        model_check(self.pod, self.llm['model'])
+    def prepare(self, llm):
+        model_check(self.pod, llm['model'])
         self.pod.port_forward(11434)
         self.server = 'http://localhost:11434'
 
@@ -97,11 +94,15 @@ class OllamaAgent(ChatAgent):
         else:
             raise e
 
-    def job(self, messages):
+    def task(self, jobs, llm):
+        self.prepare(llm)
+        return super().task(jobs, llm)
+
+    def job(self, messages, llm):
         body = {
             'messages': messages,
-            'options': self.llm['options'],
-            'model': self.llm['model'],
+            'options': llm['options'],
+            'model': llm['model'],
             'stream': False
         }
         try:
@@ -123,10 +124,10 @@ class OllamaAgent(ChatAgent):
 
 
 class OpenAIAgent(ChatAgent):
-    def __init__(self, llm_options):
+    def __init__(self):
         load_dotenv()
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        super().__init__(llm_options)
+        super().__init__()
 
     def error_handler(self, e):
         if isinstance(e, openai.RateLimitError):
@@ -135,10 +136,10 @@ class OpenAIAgent(ChatAgent):
         else:
             raise e
 
-    def job(self, messages):
+    def job(self, messages, llm):
         res = self.client.create_completion(
-            model=self.llm['model'],
+            model=llm['model'],
             messages=messages,
-            temperature=self.llm['options']['temperature'],
+            temperature=llm['options']['temperature'],
         )
         return res.choices[0].message.content.strip()

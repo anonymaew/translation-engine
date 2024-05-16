@@ -1,4 +1,5 @@
-from .curry import curry_top
+from .chatagent import ChatAgent
+from .kube import Pod
 import more_itertools
 import requests
 from time import sleep
@@ -32,28 +33,6 @@ noun_supported_langs = [
 ]
 
 
-def extract_nouns(server, text, options):
-    the_lang = [lang for lang in noun_supported_langs if lang['lang']
-                == options['src']] or None
-    if the_lang is None:
-        print(f'{options["src"]} not supported, skip entity extraction')
-        return []
-
-    print(f'Extracting {options["src"]} entities...')
-    res = requests.post(
-        f'{server}',
-        json={
-            'text': text,
-            'lang': the_lang[0]['model'],
-            'label': options['label']
-        },
-    )
-
-    json = res.json()
-    res = list(map(lambda x: x.strip(), json['list']))
-    return res
-
-
 def bullets_to_list(text):
     lines = text.split('\n')
     bullet_lines = filter(lambda x: x.strip()[:1] == '-', lines)
@@ -71,31 +50,70 @@ def translate_nouns(translate_pod, translate_entity_options, nouns):
     clumps_str = list(map(lambda c: '\n'.join(
         list(map(lambda w: f'- {w}', c))), clumps))
 
-    llm = dict(translate_entity_options, **{'validation': dont_lost_items})
-    translated_chunks = chat_task(pod_obj(translate_pod), llm, clumps_str)
+    translate_entity_options = dict(
+        translate_entity_options, **{'validation': dont_lost_items})
+    translated_chunks = translate_pod.task(
+        clumps_str, translate_entity_options)
     translated = ('\n'.join(translated_chunks)).split('\n')
     translated_words = list(map(lambda x: x.strip()[2:], translated))
     return translated_words
 
 
-def replace_nouns(config):
-    def f(texts):
-        translate_pod, entity_pod, translate_entity_options, extract_entity_options = config
-        text = '\n'.join(texts)
-        port_forward = pod_obj(entity_pod).portforward(remote_port=5000)
-        port_forward.start()
-        sleep(1)
-        entity_server = f'http://localhost:{port_forward.local_port}'
-        nouns = extract_nouns(entity_server, text, extract_entity_options)
-        port_forward.stop()
-        translted_nouns = translate_nouns(translate_pod,
-                                          translate_entity_options,
-                                          nouns)
-        noun_dict = nouns.zip(translted_nouns)
-        for k, v in noun_dict:
-            text = text.replace(k, v)
-        return text.split('\n')
-    return f
+class EntityAgent():
+    def __init__(self,
+                 translate_pod,
+                 entity_pod,
+                 extract_entity_options):
+        self.translate_pod = translate_pod
+        self.entity_pod = Pod(entity_pod)
+        self.extract_entity_options = extract_entity_options
+        self.start()
+        self.server = None
 
+    def start(self):
+        self.entity_pod.up()
 
-replace_translate_nouns = curry_top(replace_nouns)
+    def prepare(self):
+        self.entity_pod.port_forward(5000)
+        self.server = 'http://localhost:5000'
+        sleep(3)
+
+    def error_handler(self, e):
+        err_str = str(e)
+        if 'supported' in err_str:
+            print(err_str)
+        else:
+            raise e
+
+    def task(self, text, llm):
+        try:
+            self.prepare()
+            options = self.extract_entity_options
+            the_lang = [lang for lang in noun_supported_langs if lang['lang']
+                        == options['src']] or None
+            if the_lang is None:
+                raise Exception(
+                    f'{options["src"]} not supported, skip entity extraction')
+
+            print(f'Extracting {options["src"]} entities...')
+            res = requests.post(
+                f'{self.server}',
+                json={
+                    'text': text,
+                    'lang': the_lang[0]['model'],
+                    'label': self.extract_entity_options['label']
+                },
+            )
+
+            json = res.json()
+            nouns = list(map(lambda x: x.strip(), json['list']))
+            translated_nouns = translate_nouns(
+                self.translate_pod, llm, nouns)
+            noun_dict = dict(zip(nouns, translated_nouns))
+            for k, v in noun_dict.items():
+                text = text.replace(k, v)
+            return text
+
+        except Exception as e:
+            self.error_handler(e)
+            return text

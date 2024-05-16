@@ -35,6 +35,9 @@ class Document():
         self.md = res
         self.split_options = None
 
+    def __str__(self):
+        return self.md
+
     def split(self, split_options='sentences'):
         self.split_options = split_options
         if self.split_options == 'sentences':
