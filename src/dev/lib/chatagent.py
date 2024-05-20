@@ -45,7 +45,7 @@ class ChatAgent:
             try:
                 res = self.job(messages, llm)
                 if 'validation' in llm and llm['validation'](job, res) is False:
-                    # print(res)
+                    print(res)
                     print('Result validation failed, retrying...')
                     i -= 1
                     continue
@@ -137,7 +137,7 @@ class OpenAIAgent(ChatAgent):
             raise e
 
     def job(self, messages, llm):
-        res = self.client.create_completion(
+        res = self.client.chat.completion(
             model=llm['model'],
             messages=messages,
             temperature=llm['options']['temperature'],
