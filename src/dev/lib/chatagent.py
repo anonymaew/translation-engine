@@ -137,7 +137,7 @@ class OpenAIAgent(ChatAgent):
             raise e
 
     def job(self, messages, llm):
-        res = self.client.chat.completion(
+        res = self.client.chat.completions.create(
             model=llm['model'],
             messages=messages,
             temperature=llm['options']['temperature'],
