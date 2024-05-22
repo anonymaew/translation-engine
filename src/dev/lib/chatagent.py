@@ -38,10 +38,9 @@ class ChatAgent:
                 result.append('')
                 i += 1
                 continue
-            messages = [
-                {'role': 'system', 'content': llm['prompt']},
-                {'role': 'user', 'content': job}
-            ]
+            messages = [{'role': 'system', 'content': llm['prompt']}] + \
+                llm['prime'] if 'prime' in llm else [] + \
+                [{'role': 'user', 'content': job}]
             try:
                 res = self.job(messages, llm)
                 if 'validation' in llm and llm['validation'](job, res) is False:
@@ -130,11 +129,11 @@ class OpenAIAgent(ChatAgent):
         super().__init__()
 
     def error_handler(self, e):
-        if isinstance(e, openai.RateLimitError):
-            print('OpenAI rate limit reached, waiting for 65 seconds...')
-            sleep(65)
-        else:
-            raise e
+        # if isinstance(e, openai.RateLimitError):
+        #     print('OpenAI rate limit reached, waiting for 65 seconds...')
+        #     sleep(65)
+        # else:
+        raise e
 
     def job(self, messages, llm):
         res = self.client.chat.completions.create(

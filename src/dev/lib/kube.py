@@ -121,6 +121,7 @@ def pod_json(options, name):
                             'cpu': '2',
                             'memory': '8Gi',
                             'nvidia.com/gpu': '1',
+                            'ephemeral-storage': '64Gi',
                         },
                     },
                     # 'volumeMounts': [{
