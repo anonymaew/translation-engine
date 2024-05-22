@@ -17,6 +17,12 @@ def model_check(pod, model):
         pod.exec_code('ollama', 'pull', model)
 
 
+def prime_to_array(prime):
+    if len(prime) % 2 != 0:
+        raise ValueError('Prompting shots must be even: user, assistant')
+    return [{'role': ['user', 'assistant'][i % 2], 'content': p} for i, p in enumerate(prime)]
+
+
 class ChatAgent:
     def __init__(self):
         pass
@@ -39,7 +45,7 @@ class ChatAgent:
                 i += 1
                 continue
             messages = [{'role': 'system', 'content': llm['prompt']}] + \
-                llm['prime'] if 'prime' in llm else [] + \
+                (prime_to_array(llm['prime']) if 'prime' in llm else []) + \
                 [{'role': 'user', 'content': job}]
             try:
                 res = self.job(messages, llm)
