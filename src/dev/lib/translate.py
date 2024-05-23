@@ -41,14 +41,16 @@ def bullets_to_list(text):
 
 
 def dont_lost_items(text1, text2):
-    return len(bullets_to_list(text1)) == len(bullets_to_list(text2))
+    # return len(bullets_to_list(text1)) == len(bullets_to_list(text2))
+    return len(text2.split('\n')) == len(text1.split('\n'))
 
 
 def translate_nouns(translate_pod, translate_entity_options, nouns):
     print('Translating entities...')
-    clumps = more_itertools.chunked(nouns, 32)
+    clumps = more_itertools.chunked(nouns, 1)
     clumps_str = list(map(lambda c: '\n'.join(
-        list(map(lambda w: f'- {w}', c))), clumps))
+        # list(map(lambda w: f'- {w}', c))), clumps))
+        list(map(lambda w: f'{w}', c))), clumps))
 
     translate_entity_options = dict(
         translate_entity_options, **{'validation': dont_lost_items})

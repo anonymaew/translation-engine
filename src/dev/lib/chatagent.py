@@ -38,6 +38,7 @@ class ChatAgent:
 
     def task(self, jobs, llm):
         i, result = 0, []
+        res_context = []
         while i < len(jobs):
             job = jobs[i]
             if is_nothing(job):
@@ -46,6 +47,7 @@ class ChatAgent:
                 continue
             messages = [{'role': 'system', 'content': llm['prompt']}] + \
                 (prime_to_array(llm['prime']) if 'prime' in llm else []) + \
+                (res_context[-2*llm['context']:] if 'context' in llm and len(res_context)*2 >= llm['context'] else []) + \
                 [{'role': 'user', 'content': job}]
             try:
                 res = self.job(messages, llm)
@@ -55,6 +57,8 @@ class ChatAgent:
                     i -= 1
                     continue
                 result.append(res)
+                res_context.append({'role': 'user', 'content': job})
+                res_context.append({'role': 'assistant', 'content': res})
                 print('[User]----------------------------------------')
                 print(job)
                 print('[Assistant]-----------------------------------')
@@ -116,7 +120,7 @@ class OllamaAgent(ChatAgent):
                 json=body,
                 timeout=45
             )
-            return res.json()['message']['content'].strip()
+            return res.json()['message']['content']
         except requests.exceptions.Timeout:
             raise requests.exceptions.Timeout
 
