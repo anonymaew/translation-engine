@@ -3,7 +3,7 @@ from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
 from lib.translate import EntityAgent
 
-filename = '戴震天算学中国化的意义.docx'
+filename = 'Dynastic Histories and Kinship Business-Introduction.docx'
 src = 'Chinese'
 tar = 'English'
 
@@ -22,21 +22,21 @@ entity_pod = {
 }
 
 translate_entity_options = {
-    'model': 'gemma:latest',
+    'model': 'llama3:instruct',
     'options': {
-        'temperature': 0.2,
+        'temperature': 0.6,
         'num_ctx': 9999,
     },
     # 'prompt': f'Romanize the following list of {src} entities into {tar}, present in dash bullet points and do not include the original {src} language.',
-    'prompt': f'Romanize the given {src} entity into {tar}, only give one translation result.',
-    'prime': [
-        '史册',
-        'Historical records',
-        '编年史',
-        'Chronicles',
-        '考古',
-        'Archaeology',
-    ],
+    'prompt': f'Ignore the {tar} text. Please translate the given {src} entity into {tar}, only give one translation result.',
+    #'prime': [
+    #   '胡明辉',
+    #   'Hu Minghui',
+    #   '通儒',
+    #   'cosmopolitan Confucians',
+    #   '戴震',
+    #   'Dai Zhen',
+    #],
 }
 extract_entity_options = {
     'src': src,
@@ -44,12 +44,12 @@ extract_entity_options = {
     # 'label': ['PERSON', 'LOC', 'WORK_OF_ART'],
 }
 translate_main_options = {
-    'model': 'llama3:latest',
+    'model': 'llama3:instruct',
     'options': {
         'temperature': 0,
         'num_ctx': 9999,
     },
-    'prompt': f'Ignore the {tar} text. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language and include the footnotes. Retain the original format and footnotes. Do not self-reference. You are an expert translator tasked with improving a text\'s spelling, grammatical, and literary quality. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.',
+    'prompt': f'Ignore the {tar} text. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Please translate the footnotes and retain their original format. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.',
     'context': 2,
     # 'prime': [
     #     '戴震天算学中国化的意义',
@@ -57,18 +57,10 @@ translate_main_options = {
     # ],
 }
 
-rewrite_options = {
-    'model': 'mistral:latest',
-    'options': {
-        'temperature': 0,
-        'num_ctx': 9999,
-    },
-    'prompt': f'Rewrite the following sentence into formal and academic {tar}. do not include any additional discussion or comment.',
-}
 
 if __name__ == '__main__':
     agent = OllamaAgent(translate_pod)
-    # agent = OpenAIAgent()
+    #agent = OpenAIAgent()
     entity = EntityAgent(agent, entity_pod, extract_entity_options)
     file = Document(filename)
     file.md = entity.task(str(file), translate_entity_options)
