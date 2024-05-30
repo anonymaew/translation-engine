@@ -45,15 +45,23 @@ def dont_lost_items(text1, text2):
     return len(text2.split('\n')) == len(text1.split('\n'))
 
 
-def translate_nouns(translate_pod, translate_entity_options, nouns):
+def first_paragraph_with_word(paragraphs, word):
+    for p in paragraphs:
+        if word in p:
+            return p
+    return None
+
+
+def translate_nouns(translate_pod, translate_entity_options, nouns, text):
     print('Translating entities...')
     clumps = more_itertools.chunked(nouns, 1)
+    paragraphs = text.split('\n\n')
     clumps_str = list(map(lambda c: '\n'.join(
         # list(map(lambda w: f'- {w}', c))), clumps))
-        list(map(lambda w: f'{w}', c))), clumps))
+        list(map(lambda w: f'{translate_entity_options['user_prompt'](w, first_paragraph_with_word(paragraphs, w))}', c))), clumps))
 
-    translate_entity_options = dict(
-        translate_entity_options, **{'validation': dont_lost_items})
+    # delete user_prompt
+    translate_entity_options.pop('user_prompt', None)
     translated_chunks = translate_pod.task(
         clumps_str, translate_entity_options)
     translated = ('\n'.join(translated_chunks)).split('\n')
@@ -110,7 +118,7 @@ class EntityAgent():
             json = res.json()
             nouns = list(map(lambda x: x.strip(), json['list']))
             translated_nouns = translate_nouns(
-                self.translate_pod, llm, nouns)
+                self.translate_pod, llm, nouns, text)
             noun_dict = dict(zip(nouns, translated_nouns))
             for k, v in noun_dict.items():
                 text = text.replace(k, v)

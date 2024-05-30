@@ -38,17 +38,17 @@ class ChatAgent:
 
     def task(self, jobs, llm):
         i, result = 0, []
-        res_context = []
         while i < len(jobs):
             job = jobs[i]
             if is_nothing(job):
                 result.append('')
                 i += 1
                 continue
-            messages = [{'role': 'system', 'content': llm['prompt']}] + \
+            user_text = llm['user_prompt'](
+                job) if 'user_prompt' in llm else job
+            messages = [{'role': 'system', 'content': llm['prompt'] if 'prompt' in llm else ''}] + \
                 (prime_to_array(llm['prime']) if 'prime' in llm else []) + \
-                (res_context[-2*llm['context']:] if 'context' in llm and len(res_context)*2 >= llm['context'] else []) + \
-                [{'role': 'user', 'content': job}]
+                [{'role': 'user', 'content': user_text}]
             try:
                 res = self.job(messages, llm)
                 if 'validation' in llm and llm['validation'](job, res) is False:
@@ -57,10 +57,8 @@ class ChatAgent:
                     i -= 1
                     continue
                 result.append(res)
-                res_context.append({'role': 'user', 'content': job})
-                res_context.append({'role': 'assistant', 'content': res})
                 print('[User]----------------------------------------')
-                print(job)
+                print(user_text)
                 print('[Assistant]-----------------------------------')
                 print(res)
             except Exception as e:
