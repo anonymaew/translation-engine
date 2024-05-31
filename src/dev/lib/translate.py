@@ -58,7 +58,7 @@ def translate_nouns(translate_pod, translate_entity_options, nouns, text):
     paragraphs = text.split('\n\n')
     clumps_str = list(map(lambda c: '\n'.join(
         # list(map(lambda w: f'- {w}', c))), clumps))
-        list(map(lambda w: f'{translate_entity_options['user_prompt'](w, first_paragraph_with_word(paragraphs, w))}', c))), clumps))
+        list(map(lambda w: f'{translate_entity_options['user_prompt'](w, first_paragraph_with_word(paragraphs, w)) if 'user_prompt' in translate_entity_options else w}', c))), clumps))
 
     # delete user_prompt
     translate_entity_options.pop('user_prompt', None)
