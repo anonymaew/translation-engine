@@ -6,6 +6,24 @@ import subprocess
 import os
 
 
+def gpu_keys(gpu):
+    # https://docs.nationalresearchplatform.org/userdocs/running/gpu-pods/#requesting-high-end-gpus
+    high_end = {
+        'NVIDIA-A100': 'nvidia.com/a100',
+        'NVIDIA-A40': 'nvidia.com/a40',
+        'NVIDIA-RTX-A6000': 'nvidia.com/rtxa6000',
+        'Quadro-RTX-8000': 'nvidia.com/rtx8000',
+        'NVIDIA-GH200-480GB': 'nvidia.com/gh200',
+    }
+    if gpu in high_end:
+        return {
+            high_end[gpu]: '1',
+        }
+    return {
+        'nvidia.com/gpu': '1',
+    }
+
+
 class Pod:
     def __init__(self, options):
         self.options = options
@@ -120,9 +138,8 @@ def pod_json(options, name):
                         'limits': {
                             'cpu': '2',
                             'memory': '8Gi',
-                            'nvidia.com/gpu': '1',
                             'ephemeral-storage': '64Gi',
-                        },
+                        } | (gpu_keys(options['gpu']) if 'gpu' in options else {}),
                     },
                     # 'volumeMounts': [{
                     #     'mountPath': '/usr/share/ollama',
