@@ -48,7 +48,7 @@ class Document():
             raise ValueError(
                 f'Invalid split option: {self.split_options}')
 
-    def export(self, jobs):
+    def export(self, jobs, file_ext=None):
         if self.split_options == 'sentences':
             self.md = sentences_to_string(jobs)
         elif self.split_options == 'paragraphs':
@@ -57,12 +57,20 @@ class Document():
             raise ValueError(
                 f'Invalid split option: {self.split_options}')
 
+        if file_ext is None:
+            file_ext = self.file_ext
+        if file_ext not in supported_extensions:
+            raise ValueError(f'File extension not supported: {file_ext}')
+        if file_ext == 'pdf':
+            print('Conversion to PDF is partially supported, changing to docx...')
+            file_ext = 'docx'
+
         new_filename = self.filename.replace(
-            f'.{self.file_ext}', f'-translated.{self.file_ext}')
+            f'.{self.file_ext}', f'-translated.{file_ext}')
 
         print(f'Converting back to {new_filename}...')
         subprocess.run(['pandoc', '-o', new_filename, '-t',
-                       self.file_ext, '-f', 'markdown'], input=self.md.encode('utf-8'))
+                        file_ext, '-f', 'markdown'], input=self.md.encode('utf-8'))
 
         subprocess.run(['rm', '-rf', 'temp'])
 
