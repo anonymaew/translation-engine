@@ -9,12 +9,20 @@ from time import sleep
 
 
 # checking whether the machine has the model
-def model_check(pod, model):
+def model_check(pod, llm):
     try:
-        assert pod.exec_code('ollama', 'show', model, '--license') == 0
+        assert pod.exec_code('ollama', 'show', llm['model'], '--license') == 0
     except Exception:
-        print(f'Model {model} not found, pulling...')
-        pod.exec_code('ollama', 'pull', model)
+        print(f'Model {llm['model']} not found, pulling...')
+        if 'huggingface_link' in llm:
+            pod.exec_code('apt', 'install', 'curl', '-y')
+            real_link = llm['huggingface_link'].replace('blob', 'resolve')
+            filepath = f'/models/{real_link.split('/')[-1]}'
+            pod.exec_code('curl', '-L', real_link +
+                          '?download=true', '-o', filepath)
+            pod.exec_code('curl', 'localhost:11434/api/create', '-d', '{'+ f'"model": "{llm['model']}", "modelfile": "FROM {filepath}"' + '}')
+        else:
+            pod.exec_code('ollama', 'pull', llm['model'])
 
 
 def prime_to_array(prime):
@@ -79,7 +87,7 @@ class ChatAgent:
 
 class OllamaAgent(ChatAgent):
     def __init__(self, pod_options):
-        self.pod = Pod(pod_options)
+        self.pod = Pod({**pod_options, **{'data': True}})
         self.pod_options = pod_options
         super().__init__()
         self.start()
@@ -89,7 +97,7 @@ class OllamaAgent(ChatAgent):
         self.pod.up()
 
     def prepare(self, llm):
-        model_check(self.pod, llm['model'])
+        model_check(self.pod, llm)
         self.pod.port_forward(11434)
         self.server = 'http://localhost:11434'
 

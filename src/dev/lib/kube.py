@@ -139,12 +139,12 @@ def pod_json(options, name):
                             'cpu': '2',
                             'memory': '8Gi',
                             'ephemeral-storage': '64Gi',
-                        } | (gpu_keys(options['gpu']) if 'gpu' in options else {}),
+                        } | gpu_keys(options['gpu']) if 'gpu' in options else {},
                     },
-                    # 'volumeMounts': [{
-                    #     'mountPath': '/usr/share/ollama',
-                    #     'name': 'data',
-                    # }],
+                    'volumeMounts': [{
+                        'mountPath': '/models',
+                        'name': 'data',
+                    }] if 'data' in options else [],
                     'env': [
                         {
                             'name': 'PATH',
@@ -161,12 +161,12 @@ def pod_json(options, name):
                     ],
                 },
             ],
-            # 'volumes': [{
-            #     'name': 'data',
-            #     'persistentVolumeClaim': {
-            #         'claimName': 'ollama-models'
-            #     }
-            # }],
+            'volumes': [{
+                'name': 'data',
+                'persistentVolumeClaim': {
+                    'claimName': 'ollama-models'
+                }
+            }],
             'affinity': {
                 'nodeAffinity': {
                     'requiredDuringSchedulingIgnoredDuringExecution': {

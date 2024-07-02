@@ -10,7 +10,7 @@ tar = 'English'
 
 translate_pod = {
     'name': 'translate',
-    'image': 'ollama/ollama:0.1.34',
+    'image': 'ollama/ollama:0.1.48',
     'gpu': 'NVIDIA-A10',
     'command': ['/bin/sh', '-c', 'nvidia-smi && ollama serve'],
     'standby': True,
@@ -18,7 +18,6 @@ translate_pod = {
 entity_pod = {
     'name': 'entity',
     'image': 'nsrichan/ai4humanities-translation-engine:entities',
-    'gpu': 'NVIDIA-A10',
     'standby': True,
 }
 
@@ -38,13 +37,15 @@ extract_entity_options = {
     # 'label': ['PERSON', 'LOC', 'WORK_OF_ART'],
 }
 translate_main_options = {
-    'model': 'thinkverse/towerinstruct',
+    # 'huggingface_link': 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf',
+    # 'model': 'gemma2-gguf',
+    'model': 'gemma2',
     'options': {
-        'temperature': 0,
-        'num_ctx': 9999,
+        # 'temperature': 0,
+        # 'num_ctx': 9999,
     },
-    # 'prompt': f'Ignore the {tar} text. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Please translate the footnotes and retain their original format. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.',
-    'user_prompt': lambda text: f'Translate the following markdown text from {src} to {tar}. \n\n{src}: {text}\n\n{tar}:',
+    'prompt': f'Ignore the {tar} text. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Please translate the footnotes and retain their original format. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.',
+    # 'user_prompt': lambda text: f'Translate the following markdown text from {src} to {tar}. \n\n{src}: {text}\n\n{tar}:',
     # 'context': 2,
     # 'prime': [
     #     '戴震天算学中国化的意义',
@@ -56,9 +57,9 @@ translate_main_options = {
 if __name__ == '__main__':
     agent = OllamaAgent(translate_pod)
     # agent = OpenAIAgent()
-    entity = EntityAgent(agent, entity_pod, extract_entity_options)
+    # entity = EntityAgent(agent, entity_pod, extract_entity_options)
     file = Document(filename)
-    file.md = entity.task(str(file), translate_entity_options)
+    # file.md = entity.task(str(file), translate_entity_options)
     jobs = file.split('paragraphs')
     translated = agent.task(jobs, translate_main_options)
     file.export(translated)
