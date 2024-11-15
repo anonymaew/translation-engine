@@ -7,11 +7,11 @@ from time import sleep
 
 noun_supported_langs = [
     {'lang': 'Catalan', 'code': 'ca', 'model': 'ca_core_news_sm'},
-    {'lang': 'Chinese', 'code': 'zh', 'model': 'zh_core_web_sm'},
+    {'lang': 'Chinese', 'code': 'zh', 'model': 'zh_core_web_trf'},
     {'lang': 'Croatian', 'code': 'hr', 'model': 'hr_core_news_sm'},
     {'lang': 'Danish', 'code': 'da', 'model': 'da_core_news_sm'},
     {'lang': 'Dutch', 'code': 'nl', 'model': 'nl_core_news_sm'},
-    {'lang': 'English', 'code': 'en', 'model': 'en_core_web_sm'},
+    {'lang': 'English', 'code': 'en', 'model': 'en_core_web_trf'},
     {'lang': 'Finnish', 'code': 'fi', 'model': 'fi_core_news_sm'},
     {'lang': 'French', 'code': 'fr', 'model': 'fr_core_news_sm'},
     {'lang': 'German', 'code': 'de', 'model': 'de_core_news_sm'},
