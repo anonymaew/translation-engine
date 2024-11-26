@@ -2,34 +2,21 @@
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
 from lib.translate import EntityAgent
+from lib.kube import deploy_from_yml
 
-# filename = 'Dynastic Histories and Kinship Business-Introduction.docx'
-filename = '戴震天算学中国化的意义.docx'
+filename = './戴震天算学中国化的意义.md'
 src = 'Chinese'
 tar = 'English'
 
-translate_pod = {
-    'name': 'translate',
-    'image': 'ollama/ollama:0.1.48',
-    'gpu': 'NVIDIA-A10',
-    'command': ['/bin/sh', '-c', 'nvidia-smi && ollama serve'],
-    'standby': True,
-}
-entity_pod = {
-    'name': 'entity',
-    'image': 'nsrichan/ai4humanities-translation-engine:entities',
-    'standby': True,
-}
-
 translate_entity_options = {
-    'model': 'thinkverse/towerinstruct',
+    'model': 'qwen2.5:7b',
     'options': {
         'temperature': 0.8,
         'num_ctx': 9999,
     },
     # 'prompt': f'Romanize the following list of {src} entities into {tar}, present in dash bullet points and do not include the original {src} language.',
-    # 'prompt': f'Ignore the {tar} text. Please translate the given {src} entity into {tar}, only give one concise translation result.',
-    'user_prompt': lambda text, paragraph: f"Translate the entity from {src} to {tar}\n\n{src} entity: {text}\n\n{tar}: ",
+    'prompt': f'Ignore the {tar} text. Please translate the given {src} entity into {tar}, only give one concise translation result.',
+    # 'user_prompt': lambda text, paragraph: f"Translate the entity from {src} to {tar}\n\n{src} entity: {text}\n\n{tar}: ",
 }
 extract_entity_options = {
     'src': src,
@@ -37,9 +24,8 @@ extract_entity_options = {
     # 'label': ['PERSON', 'LOC', 'WORK_OF_ART'],
 }
 translate_main_options = {
-    # 'huggingface_link': 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf',
-    # 'model': 'gemma2-gguf',
-    'model': 'gemma2',
+    'model': 'qwen2.5:32b',
+    # 'model': 'gemma2',
     'options': {
         # 'temperature': 0,
         # 'num_ctx': 9999,
@@ -55,11 +41,12 @@ translate_main_options = {
 
 
 if __name__ == '__main__':
-    agent = OllamaAgent(translate_pod)
+    deploy_from_yml('deploy.yml')
+    agent = OllamaAgent()
     # agent = OpenAIAgent()
-    # entity = EntityAgent(agent, entity_pod, extract_entity_options)
+    entity = EntityAgent(agent, extract_entity_options)
     file = Document(filename)
-    # file.md = entity.task(str(file), translate_entity_options)
-    jobs = file.split('paragraphs')
+    file.md = entity.task(str(file), translate_entity_options)
+    jobs = file.split('sentences')
     translated = agent.task(jobs, translate_main_options)
     file.export(translated)

@@ -1,8 +1,9 @@
 from .chatagent import ChatAgent
-from .kube import Pod
+from .kube import Pod, port_forward
 import more_itertools
 import requests
 from time import sleep
+from tqdm import tqdm
 
 
 noun_supported_langs = [
@@ -72,19 +73,18 @@ def translate_nouns(translate_pod, translate_entity_options, nouns, text):
 class EntityAgent():
     def __init__(self,
                  translate_pod,
-                 entity_pod,
                  extract_entity_options):
         self.translate_pod = translate_pod
-        self.entity_pod = Pod(entity_pod)
         self.extract_entity_options = extract_entity_options
         self.start()
         self.server = None
 
     def start(self):
-        self.entity_pod.up()
+        pass
+        # self.entity_pod.up()
 
     def prepare(self):
-        self.entity_pod.port_forward(5000)
+        port_forward('entity', 5000)
         self.server = 'http://localhost:5000'
         sleep(3)
 
@@ -105,7 +105,15 @@ class EntityAgent():
                 raise Exception(
                     f'{options["src"]} not supported, skip entity extraction')
 
+            print(f'Preparing NER model ...')
+            _res = requests.post(
+                f'{self.server}/install',
+                json={'lang': the_lang[0]['model']},
+            )
+            _res.json()
+
             print(f'Extracting {options["src"]} entities...')
+
             res = requests.post(
                 f'{self.server}',
                 json={
@@ -114,9 +122,9 @@ class EntityAgent():
                     'label': self.extract_entity_options['label']
                 },
             )
-
             json = res.json()
             nouns = list(map(lambda x: x.strip(), json['list']))
+
             translated_nouns = translate_nouns(
                 self.translate_pod, llm, nouns, text)
             noun_dict = dict(zip(nouns, translated_nouns))

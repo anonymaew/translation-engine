@@ -3,11 +3,23 @@
 from flask import Flask, request, jsonify
 import spacy
 import time
+import subprocess
+import os
 
 app = Flask(__name__)
+models_path = os.environ.get("MODELS_PATH", "/models")
+
+
+@app.route('/install', methods=['POST'])
+def install():
+    lang = request.get_json()['lang']
+    subprocess.Popen(f'find {models_path} | grep {lang} | xargs -I{{}} pip install {{}}',
+                     shell=True)
+    return jsonify({'status': 'done'})
+
 
 @app.route('/', methods=['POST'])
-def post():
+def extract():
     data = request.get_json()
     lang, text, label = data['lang'], data['text'], data['label']
 

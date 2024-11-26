@@ -1,4 +1,4 @@
-from .kube import Pod
+from .kube import Pod, port_forward
 from .doctext import is_nothing
 from dotenv import load_dotenv
 import os
@@ -9,20 +9,29 @@ from time import sleep
 
 
 # checking whether the machine has the model
-def model_check(pod, llm):
-    try:
-        assert pod.exec_code('ollama', 'show', llm['model'], '--license') == 0
-    except Exception:
-        print(f'Model {llm['model']} not found, pulling...')
-        if 'huggingface_link' in llm:
-            pod.exec_code('apt', 'install', 'curl', '-y')
-            real_link = llm['huggingface_link'].replace('blob', 'resolve')
-            filepath = f'/models/{real_link.split('/')[-1]}'
-            pod.exec_code('curl', '-L', real_link +
-                          '?download=true', '-o', filepath)
-            pod.exec_code('curl', 'localhost:11434/api/create', '-d', '{'+ f'"model": "{llm['model']}", "modelfile": "FROM {filepath}"' + '}')
-        else:
-            pod.exec_code('ollama', 'pull', llm['model'])
+def model_check(server, llm):
+    models = requests.get(f'{server}/api/tags').json()['models']
+    wanted_model = list(
+        filter(lambda model: model['name'] == llm['model'], models))
+    print(wanted_model)
+    if (len(wanted_model) > 0):
+        return
+    print(f'Model {llm['model']} not found, pulling...')
+    # if 'huggingface_link' in llm:
+    #     pod.exec_code('apt', 'install', 'curl', '-y')
+    #     real_link = llm['huggingface_link'].replace('blob', 'resolve')
+    #     filepath = f'/models/{real_link.split('/')[-1]}'
+    #     pod.exec_code('curl', '-L', real_link +
+    #                   '?download=true', '-o', filepath)
+    #     pod.exec_code('curl', 'localhost:11434/api/create', '-d',
+    #                   '{' + f'"name": "{llm['model']}", "modelfile": "FROM {filepath}"' + '}')
+    # else:
+    #     pod.exec_code('ollama', 'pull', llm['model'])
+    res = requests.post(
+        f'{server}/api/pull',
+        json={'model': llm['model'], 'stream': False},
+    )
+    # return res.json()['message']['content']
 
 
 def prime_to_array(prime):
@@ -46,6 +55,7 @@ class ChatAgent:
 
     def task(self, jobs, llm):
         i, result = 0, []
+        print('Starting batch task')
         while i < len(jobs):
             job = jobs[i]
             if is_nothing(job):
@@ -86,20 +96,21 @@ class ChatAgent:
 
 
 class OllamaAgent(ChatAgent):
-    def __init__(self, pod_options):
-        self.pod = Pod({**pod_options, **{'data': True}})
-        self.pod_options = pod_options
+    def __init__(self):
+        # self.pod = Pod({**pod_options, **{'data': True}})
+        # self.pod_options = pod_options
         super().__init__()
         self.start()
         self.server = None
 
     def start(self):
-        self.pod.up()
+        pass
+        # self.pod.up()
 
     def prepare(self, llm):
-        model_check(self.pod, llm)
-        self.pod.port_forward(11434)
+        port_forward('ollama', 11434)
         self.server = 'http://localhost:11434'
+        model_check(self.server, llm)
 
     def error_handler(self, e):
         if e == requests.exceptions.Timeout:
@@ -124,18 +135,18 @@ class OllamaAgent(ChatAgent):
             res = requests.post(
                 f'{self.server}/api/chat',
                 json=body,
-                timeout=45
             )
             return res.json()['message']['content']
         except requests.exceptions.Timeout:
             raise requests.exceptions.Timeout
 
     def cleanup(self):
+        pass
         # self.port_forwarding.stop()
-        if not self.pod_options['standby']:
-            self.pod.delete()
-            while self.pod.status() is not None:
-                sleep(1)
+        # if not self.pod_options['standby']:
+        #     self.pod.delete()
+        #     while self.pod.status() is not None:
+        #         sleep(1)
 
 
 class OpenAIAgent(ChatAgent):

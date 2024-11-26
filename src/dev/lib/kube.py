@@ -186,3 +186,48 @@ def pod_json(options, name):
             } if 'gpu' in options else {},
         },
     })
+
+
+def deploy_from_yml(filename):
+    subprocess.Popen(f'kubectl apply -f {filename}', shell=True).communicate()
+    # get deployment names from file
+    deployments = subprocess.check_output(
+        f'kubectl get -f {filename} -o name | grep deployment',
+        shell=True).decode().strip().split('\n')
+
+    watch_process = subprocess.Popen(
+        f'kubectl events deployment --no-headers -w', shell=True, stdout=subprocess.PIPE)
+
+    wait_process = subprocess.Popen(
+        f'kubectl wait --for=condition=available {
+            ' '.join(deployments)} --timeout=-1s && kill {watch_process.pid}',
+        shell=True
+    )
+
+    sleep(2)
+    while True:
+        output = watch_process.stdout.readline()
+        if watch_process.poll() is not None:
+            break
+        if output:
+            print(output.decode().strip())
+
+
+def port_forward(service, port):
+    id = os.fork()
+    if id == 0:
+        res = subprocess.run(f'kubectl port-forward service/{service} --pod-running-timeout=1h {port}:80',
+                             shell=True, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+    else:
+        while True:
+            try:
+                requests.get(f'http://localhost:{port}')
+                break
+            except requests.exceptions.ConnectionError:
+                sleep(1)
+            except requests.exceptions.Timeout:
+                print('Timeout')
+                pass
+        print(f'Server accessible at http://localhost:{port}')
+        os.kill(id, 9)
