@@ -66,7 +66,7 @@ def translate_nouns(translate_pod, translate_entity_options, nouns, text):
     translated_chunks = translate_pod.task(
         clumps_str, translate_entity_options)
     translated = ('\n'.join(translated_chunks)).split('\n')
-    translated_words = list(map(lambda x: x.strip()[2:], translated))
+    translated_words = list(map(lambda x: x.strip(), translated))
     return translated_words
 
 
