@@ -1,5 +1,4 @@
-from .chatagent import ChatAgent
-from .kube import Pod, port_forward
+from .kube import port_forward
 import more_itertools
 import requests
 from time import sleep
@@ -114,16 +113,25 @@ class EntityAgent():
 
             print(f'Extracting {options["src"]} entities...')
 
-            res = requests.post(
-                f'{self.server}',
-                json={
-                    'text': text,
-                    'lang': the_lang[0]['model'],
-                    'label': self.extract_entity_options['label']
-                },
-            )
-            json = res.json()
-            nouns = list(map(lambda x: x.strip(), json['list']))
+            texts = text.split('\n\n')
+            chunks = [texts[0]]
+            for para in texts[1:]:
+                if (len(chunks[-1]) > 2**10):
+                    chunks += ['']
+                chunks = chunks[:-1] + [chunks[-1] + '\n\n' + para]
+
+            nouns = []
+            for chunk in tqdm(chunks):
+                res = requests.post(
+                    f'{self.server}',
+                    json={
+                        'text': chunk,
+                        'lang': the_lang[0]['model'],
+                        'label': self.extract_entity_options['label']
+                    },
+                )
+                json = res.json()
+                nouns += list(map(lambda x: x.strip(), json['list']))
 
             translated_nouns = translate_nouns(
                 self.translate_pod, llm, nouns, text)

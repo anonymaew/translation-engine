@@ -6,6 +6,7 @@ import openai
 from openai import OpenAI
 import requests
 from time import sleep
+import tqdm
 
 
 # checking whether the machine has the model
@@ -56,8 +57,10 @@ class ChatAgent:
     def task(self, jobs, llm):
         i, result = 0, []
         print('Starting batch task')
-        while i < len(jobs):
-            job = jobs[i]
+        # while i < len(jobs):
+        jobs = tqdm.tqdm(jobs)
+        for job in jobs:
+            # job = jobs[i]
             if is_nothing(job):
                 result.append('')
                 i += 1
@@ -69,22 +72,23 @@ class ChatAgent:
                 [{'role': 'user', 'content': user_text}]
             try:
                 res = self.job(messages, llm)
-                if 'validation' in llm and llm['validation'](job, res) is False:
-                    print(res)
-                    print('Result validation failed, retrying...')
-                    i -= 1
-                    continue
+                # if 'validation' in llm and llm['validation'](job, res) is False:
+                #     print(res)
+                #     print('Result validation failed, retrying...')
+                #     i -= 1
+                #     continue
                 result.append(res)
-                print('[User]----------------------------------------')
-                print(user_text)
-                print('[Assistant]-----------------------------------')
-                print(res)
+                jobs.write('[User]----------------------------------------')
+                jobs.write(user_text)
+                jobs.write('[Assistant]-----------------------------------')
+                jobs.write(res)
             except Exception as e:
                 self.error_handler(e)
-                i -= 1
+                # i -= 1
                 continue
             finally:
                 i += 1
+                jobs.update(1)
         self.cleanup()
         return result
 
