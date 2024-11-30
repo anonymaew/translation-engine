@@ -21,15 +21,14 @@ spec:
           requests:
             cpu: 8
             memory: 32Gi
+            ephemeral-storage: 128Gi
             # nvidia.com/a100: 1
           limits:
             cpu: 8
             memory: 32Gi
+            ephemeral-storage: 128Gi
             # nvidia.com/a100: 1
             nvidia.com/gpu: 1
-        volumeMounts:
-        - mountPath: /root/.ollama
-          name: ollama-models
         env:
         - name: PATH
           value: "/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -37,10 +36,6 @@ spec:
           value: "/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
         - name: NVIDIA_DRIVER_CAPABILITIES
           value: "compute,utility"
-      volumes:
-      - name: ollama-models
-        persistentVolumeClaim:
-          claimName: ollama-models
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -50,20 +45,6 @@ spec:
                 operator: In
                 values:
                 - NVIDIA-A10
-
----
-
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ollama-models
-spec:
-  storageClassName: rook-ceph-block
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 256Gi
 
 ---
 

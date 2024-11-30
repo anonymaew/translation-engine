@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 import openai
 from openai import OpenAI
+import json
 import requests
 from time import sleep
 import tqdm
@@ -11,28 +12,34 @@ import tqdm
 
 # checking whether the machine has the model
 def model_check(server, llm):
-    models = requests.get(f'{server}/api/tags').json()['models']
-    wanted_model = list(
-        filter(lambda model: model['name'] == llm['model'], models))
-    print(wanted_model)
-    if (len(wanted_model) > 0):
-        return
-    print(f'Model {llm['model']} not found, pulling...')
-    # if 'huggingface_link' in llm:
-    #     pod.exec_code('apt', 'install', 'curl', '-y')
-    #     real_link = llm['huggingface_link'].replace('blob', 'resolve')
-    #     filepath = f'/models/{real_link.split('/')[-1]}'
-    #     pod.exec_code('curl', '-L', real_link +
-    #                   '?download=true', '-o', filepath)
-    #     pod.exec_code('curl', 'localhost:11434/api/create', '-d',
-    #                   '{' + f'"name": "{llm['model']}", "modelfile": "FROM {filepath}"' + '}')
-    # else:
-    #     pod.exec_code('ollama', 'pull', llm['model'])
-    res = requests.post(
+
+    print(f'Preparing LLM: {llm['model']}')
+
+    responses = requests.post(
         f'{server}/api/pull',
-        json={'model': llm['model'], 'stream': False},
+        json={'model': llm['model']},
+        headers={"Content-Type": "application/json"},
+        stream=True
     )
-    # return res.json()['message']['content']
+    bar, barname = None, ''
+    for response in responses.iter_lines():
+        response = json.loads(response.decode('utf-8'))
+        if "total" in response:
+            headhash = response["status"].split(' ')[-1]
+            if barname != headhash:
+                barname = headhash
+                if bar is not None:
+                    bar.close()
+                    bar = None
+                bar = tqdm.tqdm(total=response["total"], desc=barname,
+                                unit='B', unit_scale=True)
+            if "completed" in response:
+                bar.update(response["completed"] - bar.n)
+        else:
+            if bar is not None:
+                bar.close()
+                bar = None
+            print(response["status"])
 
 
 def prime_to_array(prime):
@@ -64,6 +71,7 @@ class ChatAgent:
             if is_nothing(job):
                 result.append('')
                 i += 1
+                jobs.update(1)
                 continue
             user_text = llm['user_prompt'](
                 job) if 'user_prompt' in llm else job
