@@ -15,8 +15,8 @@ model = None
 def install():
     global model
     lang = request.get_json()['lang']
-    subprocess.Popen(f'find {models_path} | grep {lang} | xargs -I{{}} pip install {{}}',
-                     shell=True)
+    subprocess.run(f'find {models_path} | grep {lang} | xargs -I{{}} pip install {{}}',
+                   shell=True)
     model = spacy.load(lang)
     return jsonify({'status': 'done'})
 

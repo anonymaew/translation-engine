@@ -5,7 +5,8 @@ WORKDIR /app
 COPY requirements.txt /app
 RUN pip install -r requirements.txt
 
-COPY app.py /app
+COPY app.py populate.sh /app
+RUN chmod +x populate.sh
 
 EXPOSE 5000
 CMD ["/bin/sh", "-c", "python -m flask run --host=0.0.0.0"]
