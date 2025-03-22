@@ -20,15 +20,15 @@ spec:
         resources:
           requests:
             cpu: 8
-            memory: 32Gi
+            memory: 16Gi
             ephemeral-storage: 128Gi
-            # nvidia.com/a100: 1
+            nvidia.com/a100: 1
           limits:
             cpu: 8
-            memory: 32Gi
+            memory: 16Gi
             ephemeral-storage: 128Gi
-            # nvidia.com/a100: 1
-            nvidia.com/gpu: 1
+            nvidia.com/a100: 1
+            # nvidia.com/gpu: 1
         env:
         - name: PATH
           value: "/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -44,7 +44,7 @@ spec:
               - key: nvidia.com/gpu.product
                 operator: In
                 values:
-                - NVIDIA-A10
+                - NVIDIA-A100-SXM4-80GB
 
 ---
 
@@ -57,97 +57,32 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+  - port: 11434 
     protocol: TCP
     targetPort: 11434
   selector:
-    k8s-app: ollama-server
-
----
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: entity-server
-  labels:
     k8s-app: translation-engine
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      k8s-app: entity-server
-  template:
-    metadata:
-      labels:
-        k8s-app: entity-server
-    spec:
-      containers:
-      - image: nsrichan/ai4humanities-translation-engine:entities
-        imagePullPolicy: Always
-        name: entity-pod
-        resources:
-          requests:
-            cpu: 8
-            memory: 8Gi
-          limits:
-            cpu: 8
-            memory: 8Gi
-            nvidia.com/gpu: 1
-        volumeMounts:
-        - mountPath: /models
-          name: entity-models
-        env:
-        - name: PATH
-          value: "/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-        - name: LD_LIBRARY_PATH
-          value: "/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
-        - name: NVIDIA_DRIVER_CAPABILITIES
-          value: "compute,utility"
-        - name: MODELS_PATH
-          value: "/models"
-      volumes:
-      - name: entity-models
-        persistentVolumeClaim:
-          claimName: entity-models
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: nvidia.com/gpu.product
-                operator: In
-                values:
-                - NVIDIA-A10
 
 ---
 
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: entity-models
-spec:
-  storageClassName: rook-ceph-block
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 64Gi
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: entity
-  labels:
-    k8s-app: entity
-spec:
-  type: ClusterIP
-  ports:
-  - port: 80
-    protocol: TCP
-    targetPort: 5000
-  selector:
-    k8s-app: entity-server
-
----
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   annotations:
+#     kubernetes.io/ingress.class: haproxy
+#   name: ollama-ingress
+# spec:
+#   rules:
+#   - host: ollama-dcct.nrp-nautilus.io
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: ollama
+#             port:
+#               number: 11434
+#   tls:
+#   - hosts:
+#     - ollama-dcct.nrp-nautilus.io
