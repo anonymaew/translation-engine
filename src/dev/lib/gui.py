@@ -75,7 +75,7 @@ class TranslateForm:
         if st.button("Save") and config_name != "":
             if re.match("^[\\w-]+$", config_name) is not None:
                 # Extract values from session state
-                form_data = {key: st.session_state[f"form_{key}"] for key in self.element.keys()}
+                form_data = {key: st.session_state[f"{key}"] for key in self.element.keys()}
                 os.makedirs(f"data/{mode}", exist_ok=True)
                 with open(f"data/{mode}/{config_name}.json", "w") as f:
                     json.dump(form_data, f)
@@ -103,8 +103,9 @@ class TranslateForm:
             file_path = f"{directory}/{filename}.json"
             with open(file_path, "r") as f:
                 config_data = json.load(f)
+                print(config_data)
             for key, value in config_data.items():
-                session_key = f"form_{key}"
+                session_key = f"{key}"
                 if session_key in st.session_state:
                     st.session_state[session_key] = value
             # TODO: find the way to put dictionary's value into those input again
