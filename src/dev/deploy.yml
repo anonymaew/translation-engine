@@ -45,6 +45,7 @@ spec:
                 operator: In
                 values:
                 - NVIDIA-A100-SXM4-80GB
+                # - NVIDIA-A10
 
 ---
 
@@ -57,11 +58,11 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 11434 
+  - port: 80
     protocol: TCP
     targetPort: 11434
   selector:
-    k8s-app: translation-engine
+    k8s-app: ollama-server
 
 ---
 
