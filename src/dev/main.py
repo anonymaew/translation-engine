@@ -1,38 +1,49 @@
 # from lib.translate import replace_translate_nouns
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
+from lib.gui import ChatViewCLI
+from lib.kube import deploy_from_yml, port_forward
 from lib.translate import EntityAgent
-from lib.kube import deploy_from_yml
 
-filename = 'chapter 4.docx'
-src = 'Chinese'
-tar = 'English'
+filename = "chinese-text.docx"
+src = "Chinese"
+tar = "English"
 
 translate_entity_options = {
     # 'model': 'jack/llama3-8b-chinese:latest',
-    'model': 'qwen2.5: 7b',
-    'options': {
-        'temperature': 0.8,
-        'num_ctx': 9999,
+    "model": "qwen2.5:7b",
+    "options": {
+        "temperature": 0.8,
+        "num_ctx": 9999,
     },
     # 'prompt': f'Romanize the following list of {src} entities into {tar}, present in dash bullet points and do not include the original {src} language.',
-    'prompt': f'Ignore the {tar} text. Please translate the given {src} entity into {tar}, only give one concise translation result.',
+    "prompt": f"Ignore the {tar} text. Please translate the given {src} entity into {tar}, only give one concise translation result.",
     # 'user_prompt': lambda text, paragraph: f"Translate the entity from {src} to {tar}\n\n{src} entity: {text}\n\n{tar}: ",
 }
 extract_entity_options = {
-    'src': src,
-    'label': ['PERSON', 'GPE', 'LOC', 'ORG', 'FAC', 'EVENT', 'NORP', 'WORK_OF_ART', 'PRODUCT'],
+    "src": src,
+    "label": [
+        "PERSON",
+        "GPE",
+        "LOC",
+        "ORG",
+        "FAC",
+        "EVENT",
+        "NORP",
+        "WORK_OF_ART",
+        "PRODUCT",
+    ],
     # 'label': ['PERSON', 'LOC', 'WORK_OF_ART'],
 }
 translate_main_options = {
     # 'model': 'jack/llama3-8b-chinese:latest',
-    'model': 'qwen2.5: 32b',
-    'options': {
+    "model": "qwen2.5:72b",
+    "options": {
         # 'temperature': 0,
         # 'num_ctx': 9999,
     },
-    'prompt': f'You are an expert translator. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Please translate the footnotes and retain their original format and quotes. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.',
-    'user_prompt': lambda src_sentence: f"""
+    "prompt": f"You are an expert translator. Please translate the {src} language sentence into {tar} language using the vocabulary and expressions of the native speaker of the {tar} language. Please translate the footnotes and retain their original format and quotes. Please use a concise, clear, and formal tone of voice and academic writing style. Please do not give any alternative translation or including any notes or discussion.",
+    "user_prompt": lambda src_sentence: f"""
     You will be provided source sentences in {src} to translate in into {tar} similar to the ones below:
 
     {src}: 行己有耻，博学于文。封建之失，其专在下；郡县之失，其专在上。
@@ -53,17 +64,19 @@ translate_main_options = {
 
     {src}: {src_sentence}
     {tar}:
-    """
+    """,
 }
 
 
-if __name__ == '__main__':
-    deploy_from_yml('deploy.yml')
-    agent = OllamaAgent()
+if __name__ == "__main__":
+    deploy_from_yml("deploy.yml")
+    port_forward("ollama", 11434)
+    agent = OllamaAgent("localhost:11434")
     # agent = OpenAIAgent()
     # entity = EntityAgent(agent, extract_entity_options)
-    file = Document(filename)
+    file = Document(filename, open(filename, "rb").read())
     # file.md = entity.task(str(file), translate_entity_options)
-    jobs = file.split('sentences')
-    translated = agent.task(jobs, translate_main_options)
+    jobs = file.split("paragraphs")
+    cli = ChatViewCLI()
+    translated = agent.task(jobs, translate_main_options, feedback=cli.feedback)
     file.export(translated)
