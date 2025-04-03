@@ -2,7 +2,7 @@ import ast
 import json
 import os
 import re
-from time import time
+import time
 
 import streamlit as st
 
@@ -75,13 +75,19 @@ class TranslateForm:
         if st.button("Save") and config_name != "":
             if re.match("^[\\w-]+$", config_name) is not None:
                 # Extract values from session state
-                form_data = {key: st.session_state[f"{key}"] for key in self.element.keys()}
+                form_data = {
+                    key: value
+                    for key, value in st.session_state.items()
+                    if key in self.element.keys()}
+                #Make the json files and then put the data into the json file (json file can be found in data folder)
                 os.makedirs(f"data/{mode}", exist_ok=True)
                 with open(f"data/{mode}/{config_name}.json", "w") as f:
                     json.dump(form_data, f)
-                # TODO: find the way to extract those input values above
-                # into dictonary, then convert it to JSON.
-                # may start from this: https://docs.streamlit.io/develop/api-reference/caching-and-state/st.session_state
+
+                #message display to say that it succesfully 
+                st.success(f"Configuration '{config_name}' saved successfully!")
+                # to have the message show up before 
+                time.sleep(1.5)  
                 st.rerun()
             else:
                 st.error("The name must contains only alphanumeric or dashes only")
@@ -99,15 +105,19 @@ class TranslateForm:
             ),
         )
         filename = st.selectbox("Saved configs", files)
+        #to load the config file
         if st.button("Load"):
             file_path = f"{directory}/{filename}.json"
-            with open(file_path, "r") as f:
-                config_data = json.load(f)
-                print(config_data)
-            for key, value in config_data.items():
-                session_key = f"{key}"
-                if session_key in st.session_state:
-                    st.session_state[session_key] = value
+            try:
+                with open(f"{directory}/{filename}.json","r") as f:
+                    config_data = json.load(f)
+                for key in self.element.keys():
+                    if key in config_data:
+                        st.session_state[key] = config_data[key]
+                st.success(f"Loaded '{filename}'!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Load failed: {str(e)}")
             # TODO: find the way to put dictionary's value into those input again
 
 
