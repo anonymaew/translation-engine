@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from .doctext import is_nothing
-from .gui import feedback
+from .gui import ChatViewCLI
 from .kube import Pod, port_forward
 
 
@@ -67,12 +67,11 @@ class ChatAgent:
     def error_handler(self, e):
         raise e
 
-    def task(self, jobs, llm, feedback=feedback):
+    def task(self, jobs, llm, feedback=ChatViewCLI().feedback):
         result = []
         print("Starting batch task")
         hist = []
         for i, job in enumerate(jobs):
-            feedback(i, len(jobs), user=job)
             if is_nothing(job):
                 result.append("")
                 feedback(assistant="")
@@ -101,6 +100,7 @@ class ChatAgent:
                 #     continue
 
                 result.append(res)
+                feedback(i, len(jobs), user=job)
                 feedback(assistant=res)
                 # jobs.write("[User]----------------------------------------")
                 # jobs.write(user_text)
@@ -150,8 +150,10 @@ class OllamaAgent(ChatAgent):
         else:
             raise e
 
-    def task(self, jobs, llm, feedback=feedback):
+    def task(self, jobs, llm, feedback=ChatViewCLI().feedback):
+        feedback(status="Preparing LLM models")
         self.prepare(llm)
+        feedback(status="Translating")
         return super().task(jobs, llm, feedback)
 
     def job(self, messages, llm):

@@ -1,9 +1,10 @@
-# import fitz
 import re
 import subprocess
 
+import fitz
 import more_itertools
-import pdf2docx
+
+# import pdf2docx
 
 doc_dir = "./doc/"
 
