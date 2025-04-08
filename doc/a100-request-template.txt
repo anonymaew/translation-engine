@@ -1,0 +1,37 @@
+# Why do you specifically need A100s?
+We need to run larger LLMs.
+
+# Have you tested your workload on lower-tier GPUs?
+Yes
+
+# If Yes, explain the limitations.
+The A10 only has 24GB VRAM, which is not big enough.
+
+# Will you be using the A100 GPUs to run LLMs?
+Yes
+
+# If yes, what for?
+QWEN2.5:72b
+
+# If yes, is it part of research or as a service for your group?
+yes
+
+# If yes, how many parameters does your model have?
+72b
+
+# If yes, What type of workload will you be running?:
+Customized translation pipeline
+
+# How will you use the A100s?
+[X] Interactive development (e.g., Jupyter, SSH sessions, debugging)
+[ ] Automated batch jobs (e.g., SLURM, Kubernetes Jobs, scheduled tasks)
+[ ] Other (specify)
+
+# Will your jobs automatically terminate when completed?
+No, but we will spin down the pod manually when unused.
+
+# Are there hard deadlines for your work on the A100 GPUs? Please specify.
+No
+
+# Any notes or comments?
+No
