@@ -1,7 +1,7 @@
 import re
 import subprocess
 
-import fitz
+# import fitz
 import more_itertools
 
 # import pdf2docx
