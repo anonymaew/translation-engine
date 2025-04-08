@@ -196,17 +196,19 @@ class ChatViewGUI:
         if completed is not None and all is not None:
             prog_str = f"Translated [{completed}/{all}]"
             if completed == 0:
-                self.time_started = time()
+                self.time_started = time.time()
                 self.progress_bar.progress(0, text=prog_str)
             elif completed == all:
                 if self.time_finished is None:
-                    self.time_finished = time()
+                    self.time_finished = time.time()
                 self.progress_bar.progress(
                     1.0,
                     text=f"{prog_str} Time taken: {sec_to_str(self.time_finished - self.time_started)}",
                 )
             else:
-                et_sec = (time() - self.time_started) * (all - completed) / completed
+                et_sec = (
+                    (time.time() - self.time_started) * (all - completed) / completed
+                )
                 et_str = f"Estimated time left: {sec_to_str(et_sec)}"
                 self.progress_bar.progress(
                     completed / all,
