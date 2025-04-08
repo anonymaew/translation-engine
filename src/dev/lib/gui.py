@@ -79,7 +79,7 @@ class TranslateForm:
         # Translate button
 
     def get(self):
-        return self.element
+        return st.session_state
 
     @st.dialog("Saving config")
     def save(self, mode):
