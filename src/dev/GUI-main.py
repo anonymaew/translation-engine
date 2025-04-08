@@ -6,7 +6,7 @@ import streamlit as st
 
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
-from lib.gui import ChatView, TranslateForm
+from lib.gui import ChatViewGUI, TranslateForm
 from lib.kube import deploy_from_yml, port_forward
 from lib.translate import EntityAgent
 
@@ -39,7 +39,7 @@ def main():
         print(uploaded_file.name)
         print(form_result)
 
-        gui = ChatView()
+        gui = ChatViewGUI()
         gui.feedback(status="Preparing resources on Kubernetes cluster")
         deploy_from_yml("deploy.yml")
         port_forward("ollama", 11434)

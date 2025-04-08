@@ -2,11 +2,7 @@ import ast
 import json
 import os
 import re
-<<<<<<< HEAD
 import time
-=======
-from time import sleep, time
->>>>>>> 9a1e03d4de70f025d08808205d92f3737b48707a
 
 import streamlit as st
 from tqdm import tqdm
@@ -18,6 +14,7 @@ model_options = {
     "Custom": None,
 }
 default_prompt = "You are an expert translator. Please translate the SOURCE language sentence into TARGET language accurately."
+data_dir = "data"
 
 
 class TranslateForm:
@@ -68,7 +65,16 @@ class TranslateForm:
 
         self.element = {}
 
-        self.load_input()
+        load_data = None
+        if "load" in st.query_params:
+            directory = f"{data_dir}/conf-translate"
+            file_path = f"{directory}/{st.query_params['load']}.json"
+            try:
+                with open(file_path) as f:
+                    load_data = json.load(f)
+            except Exception as e:
+                st.error(f"Load failed: {str(e)}")
+        self.load_input(load_data)
 
         # Translate button
 
@@ -81,78 +87,70 @@ class TranslateForm:
         if st.button("Save") and config_name != "":
             if re.match("^[\\w-]+$", config_name) is not None:
                 # Extract values from session state
-<<<<<<< HEAD
                 form_data = {
-                    key: value
-                    for key, value in st.session_state.items()
-                    if key in self.element.keys()}
-                #Make the json files and then put the data into the json file (json file can be found in data folder)
-=======
-                form_data = {key: st.session_state[key] for key in self.element.keys()}
->>>>>>> 9a1e03d4de70f025d08808205d92f3737b48707a
-                os.makedirs(f"data/{mode}", exist_ok=True)
-                with open(f"data/{mode}/{config_name}.json", "w") as f:
+                    key: st.session_state[key] for key in st.session_state.keys()
+                }
+                os.makedirs(f"{data_dir}/{mode}", exist_ok=True)
+                with open(f"{data_dir}/{mode}/{config_name}.json", "w") as f:
                     json.dump(form_data, f)
 
-                #message display to say that it succesfully 
+                # message display to say that it succesfully
                 st.success(f"Configuration '{config_name}' saved successfully!")
-                # to have the message show up before 
-                time.sleep(1.5)  
+                # to have the message show up before
+                time.sleep(1.5)
                 st.rerun()
             else:
                 st.error("The name must contains only alphanumeric or dashes only")
 
     @st.fragment
     def load_input(self, json_data=None):
-        # for key, val in json_data.items():
-        #     if key in self.element and key in st.session_state:
-        #         print(st.session_state[key])
-        #         st.session_state[key] = json_data[key]
-        #         print(st.session_state[key])
-        # st.rerun()
         for element in self.input_list:
             key = element["name"]
-            # print(type(self.element[key]))
             if json_data is None:
                 element["element"](key)
             else:
                 element["element"](key, json_data[key])
-            # print(st.session_state[key])
 
     @st.dialog("Loading an existing configuration")
     def load(self, mode):
-        directory = f"data/{mode}"
+        directory = f"{data_dir}/{mode}"
         if not os.path.exists(directory):
             st.error(f"Configuration directory '{directory}' not found.")
             return
         files = map(
-            lambda f: f[:-5],
+            lambda f: f[: -(len(data_dir) + 1)],
             filter(
-                lambda f: len(f) > 5 and f[-5:] == ".json", os.listdir(f"data/{mode}")
+                lambda f: len(f) > (len(data_dir) + 1)
+                and f[-(len(data_dir) + 1) :] == ".json",
+                os.listdir(f"{data_dir}/{mode}"),
             ),
         )
         filename = st.selectbox("Saved configs", files)
-        #to load the config file
+        # to load the config file
+        # st.page_link(f"./GUI-main.py?load={filename}", label="load")
         if st.button("Load"):
-            file_path = f"{directory}/{filename}.json"
-<<<<<<< HEAD
-            try:
-                with open(f"{directory}/{filename}.json","r") as f:
-                    config_data = json.load(f)
-                for key in self.element.keys():
-                    if key in config_data:
-                        st.session_state[key] = config_data[key]
-                st.success(f"Loaded '{filename}'!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Load failed: {str(e)}")
-=======
-            with open(file_path, "r") as f:
-                config_data = json.load(f)
-                self.load_input(config_data)
-            # print(st.session_state)
->>>>>>> 9a1e03d4de70f025d08808205d92f3737b48707a
-            # TODO: find the way to put dictionary's value into those input again
+            st.query_params["load"] = filename
+            st.rerun()
+        #     file_path = f"{directory}/{filename}.json"
+        #     try:
+        #         with open(file_path) as f:
+        #             config_data = json.load(f)
+        #         for key in self.element.keys():
+        #             if key in config_data:
+        #                 st.session_state[key] = config_data[key]
+        #         st.success(f"Loaded '{filename}'!")
+        #         # st.rerun()
+        #     except Exception as e:
+        #         st.error(f"Load failed: {str(e)}")
+
+
+# =======
+#             with open(file_path, "r") as f:
+#                 config_data = json.load(f)
+#                 self.load_input(config_data)
+#             # print(st.session_state)
+# >>>>>>> 9a1e03d4de70f025d08808205d92f3737b48707a
+# TODO: find the way to put dictionary's value into those input again
 
 
 class ChatViewCLI:
