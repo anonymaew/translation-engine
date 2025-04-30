@@ -278,4 +278,4 @@ def port_forward(service, port):
 
 def delete_deployment():
     print(f"Deleting all deployments")
-    subprocess.run(["kubectl", "delete", "deployment"])
+    subprocess.run(["kubectl", "delete", "deployment", "--all"])
