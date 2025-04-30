@@ -2,7 +2,7 @@
 from lib.chatagent import OllamaAgent, OpenAIAgent
 from lib.doctext import Document
 from lib.gui import ChatViewCLI
-from lib.kube import deploy_from_yml, port_forward
+from lib.kube import delete_deployment, deploy_from_yml, port_forward
 from lib.translate import EntityAgent
 
 filename = "chinese-text.docx"
@@ -37,7 +37,7 @@ extract_entity_options = {
 }
 translate_main_options = {
     # 'model': 'jack/llama3-8b-chinese:latest',
-    "model": "qwen2.5:72b",
+    "model": "qwen2.5:32b",
     "options": {
         # 'temperature': 0,
         # 'num_ctx': 9999,
@@ -76,7 +76,8 @@ if __name__ == "__main__":
     # entity = EntityAgent(agent, extract_entity_options)
     file = Document(filename, open(filename, "rb").read())
     # file.md = entity.task(str(file), translate_entity_options)
-    jobs = file.split("paragraphs")
+    jobs = file.split("sentences")
     cli = ChatViewCLI()
     translated = agent.task(jobs, translate_main_options, feedback=cli.feedback)
     file.export(translated)
+    # delete_deployment()
